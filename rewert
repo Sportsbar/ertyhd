@@ -1,25 +1,54 @@
-function validateInput() {
-    var inputField = document.getElementById("requesterDetails");
-    var input = inputField.value.trim();
-    var regex = /^[A-Za-z0-9_-]+$/;
-    var errorDiv = document.getElementById("inputError");
-    var helpText = document.getElementById("helpText");
+ public IActionResult GetAssignee()
+        {
+            var employees = _context.xref_productdevelopment_team
+                .Where(e => e.active == 1)
+                .Select(e => new { e.firstName, e.lastName, e.employeeEmail, e.loginId })
+                .ToList();
 
-    if (!regex.test(input)) {
-        inputField.classList.add("is-invalid");
-        errorDiv.style.display = "block";
-        helpText.style.display = "none";
-    } else {
-        inputField.classList.remove("is-invalid");
-        errorDiv.style.display = "none";
-        helpText.style.display = "block";
-    }
-}
+            var accounts = _context.assignee_accountid
+                .ToList();
 
+            return Json(new { employees, accounts });
+        }
+        
+        
+        
+        
+        function GetAssigneeDetails() {
+            $.ajax({
+                url: "/JiraTicketingTool/GetAssignee",
+                type: "GET",
+                dataType: "json",
+                success: function (data) {
+                    var options = "";
+                    for (var i = 0; i < data.employees.length; i++) {
+                        options += "<option value='" + data.employees[i].employeeEmail + "' data-account-id='" + getAccountId(data.accounts, data.employees[i].loginId) + "'>" + data.employees[i].firstName + " " + data.employees[i].lastName + " (" + data.employees[i].loginId + ")" + "</option>";
+                    }
+                    $("#Assignee").append(options);
+                    // Initialize Select2 plugin
+                    $('#Assignee').select2();
+                }
+            });
+        }
 
-<div class="col-8">
-                <label for="requesterDetails">Requester Details</label>
-                <input type="text" id="requesterDetails" name="requesterDetails" style="width: 100%" class="form-control" oninput="validateInput()">
-                <div id="inputError" style="color: red; display: none">Invalid input. Only hyphens are allowed.</div>
-                <div id="helpText" style="color: gray;">Enter requester details using only hyphens.</div>
-            </div>
+        function getAccountId(accounts, loginId) {
+            for (var i = 0; i < accounts.length; i++) {
+                if (accounts[i].loginId === loginId) {
+                    return accounts[i].accountId;
+                }
+            }
+            return "";
+        }
+        
+        
+        
+        
+         var assigneeAccountId = $("#Assignee").find('option:selected').data('account-id');
+         
+         
+         
+         
+         
+         
+         
+           formData.append('accountId', assigneeAccountId);
