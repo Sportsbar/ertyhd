@@ -1,90 +1,40 @@
-using CommonFunctions;
-using Newtonsoft.Json;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Net.Http;
-using System.Threading.Tasks;
-
-public class XrefProductDevelopmentTeam
-{
-    [Required]
-    public string firstName { get; set; }
-    [Required]
-    public string lastName { get; set; }
-    [Required]
-    public string employeeEmail { get; set; }
-    public int active { get; set; }
-}
-
-
-public class AssignedDetails
-{
-    [Key]
-    public int Id { get; set; }
-    public string firstName { get; set; }
-    public string lastName { get; set; }
-    public string employeeEmail { get; set; }
-    public string accountId { get; set; }
-}
-
-public class Program
-{
-    private static readonly HttpClient httpClient = new HttpClient();
-
-    public static async Task Main(string[] args)
-    {
-        using var context = new AppDbContext(); // create an instance of AppDbContext
-
-        var employees = context.xref_productdevelopment_team
-             .Where(e => !string.IsNullOrEmpty(e.firstName) && (!string.IsNullOrEmpty(e.lastName) || !string.IsNullOrEmpty(e.employeeEmail)))
-             .Select(e => e.employeeEmail)
-             .Distinct()
-             .ToList();
-
-        var assignedDetailsList = new List<AssignedDetails>();
-
-        foreach (var employeeEmail in employees)
-        {
-            var url = $"https://geek1121.atlassian.net/rest/api/3/user/search?query={employeeEmail}";
-            var username = "your-username";
-            var password = "your-password";
-            httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(
-                "Basic", Convert.ToBase64String(System.Text.ASCIIEncoding.ASCII.GetBytes($"{username}:{password}")));
-
-            var response = await httpClient.GetAsync(url);
-
-            if (response.IsSuccessStatusCode)
-            {
-                var content = await response.Content.ReadAsStringAsync();
-                var users = JsonConvert.DeserializeObject<List<dynamic>>(content);
-
-                if (users.Count > 0)
-                {
-                    var accountId = users[0].accountId.ToString();
-
-                    var employee = context.xref_productdevelopment_team
-                        .FirstOrDefault(e => e.employeeEmail == employeeEmail);
-
-                    var assignedDetails = new AssignedDetails
-                    {
-                        firstName = employee.firstName,
-                        lastName = employee.lastName,
-                        employeeEmail = employeeEmail,
-                        accountId = accountId
-                    };
-
-                    assignedDetailsList.Add(assignedDetails);
-                }
-            }
-        }
-
-        // Save the assigned details to the database
-        foreach (var assignedDetails in assignedDetailsList)
-        {
-            context.assigned_details.Add(assignedDetails);
-        }
-
-        await context.SaveChangesAsync(); // save changes to the database
-    }
-}
+CREATE TABLE [dbo].[Employee](  
+    [Id] [int] IDENTITY(1,1) NOT NULL,  
+    [Name] [nvarchar](50) NULL,  
+    [Gender] [char](10) NULL,  
+    [Age] [int] NULL,  
+    [Position] [nvarchar](50) NULL,  
+    [Office] [nvarchar](50) NULL,  
+    [HireDate] [datetime] NULL,  
+    [Salary] [int] NULL,  
+    [DepartmentId] [int] NULL,  
+PRIMARY KEY CLUSTERED   
+(  
+    [Id] ASC  
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]  
+) ON [PRIMARY]  
+GO  
+  
+ALTER TABLE [dbo].[Employee]  WITH CHECK ADD FOREIGN KEY([DepartmentId])  
+REFERENCES [dbo].[Department] ([Id])  
+GO  CREATE TABLE [dbo].[UserRolesMapping](  
+    [Id] [int] IDENTITY(1,1) NOT NULL,  
+    [UserId] [int] NULL,  
+    [RoleId] [int] NULL,  
+PRIMARY KEY CLUSTERED   
+(  
+    [Id] ASC  
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]  
+) ON [PRIMARY]  
+GO  
+  
+ALTER TABLE [dbo].[UserRolesMapping]  WITH CHECK ADD FOREIGN KEY([RoleId])  
+REFERENCES [dbo].[Roles] ([Id])  
+GO  
+  
+ALTER TABLE [dbo].[UserRolesMapping]  WITH CHECK ADD FOREIGN KEY([RoleId])  
+REFERENCES [dbo].[Roles] ([Id])  
+GO  
+  
+ALTER TABLE [dbo].[UserRolesMapping]  WITH CHECK ADD FOREIGN KEY([UserId])  
+REFERENCES [dbo].[Users] ([Id])  
