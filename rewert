@@ -1,160 +1,142 @@
-public IActionResult GetAssignees()
-        {
-            try
-            {
-                var assignees = _context.assignee_accountid
-                    .Select(a => new { a.accountId, a.upn, a.name, a.loginId, a.employee_email })
-                    .ToList();
-
-                return Json(assignees);
-            }
-            catch (Exception ex)
-            {
-                return Json(new { error = ex.Message });
-            }
-        }
-        
-         public List<assignee_accountid> GetAssigneeDetails(string upn)
-        {
-            List<assignee_accountid> assigneeDetails = new List<assignee_accountid>();
-            assigneeDetails = _context.assignee_accountid
-                .Where(e => e.upn == upn)
-                .Select(e => new assignee_accountid { name = e.name, employee_email= e.employee_email })
-                .ToList();
-
-            return assigneeDetails;
-        }
-
-
-
- #region Create Ticket
-        [HttpPost]
-        public IActionResult CreateJiraTicket(RequestTaskDetails requestTaskDetails)
-        {
-            var responseString = string.Empty;
-            try
-            {
-                string username = _configuration["JiraSettings:Username"];
-                string password = _configuration["JiraSettings:Password"];
-                string URL = _configuration["JiraSettings:URL"];
-
-                var client = new RestClient("https://" + URL + "/rest/api/2/issue/");
-                client.Authenticator = new HttpBasicAuthenticator(username, password);
-
-                var request = new RestRequest(Method.POST);
-
-
-                var fields = new Fields
-                {
-                    description = requestTaskDetails.description,
-                    summary = requestTaskDetails.summary,
-                    project = new Project { key = requestTaskDetails.projectJiraKey },
-                    issuetype = new IssueType { name = requestTaskDetails.taskType },
-                    parent = new Parent { key = requestTaskDetails.epicIssueKey != "null" ? requestTaskDetails.epicIssueKey : requestTaskDetails.issueKey },
-                    assignee = new Assignee { emailAddress = requestTaskDetails.assigneeUpn, accountId =requestTaskDetails.assigneeAccountId },
-                    customfield_10925 = new customfield_10925 { value = requestTaskDetails.isBacklog },
-                    customfield_10658 = new customfield_10658 { value = requestTaskDetails.ragStatus },
-                    customfield_10843 = new customfield_10843 { value = requestTaskDetails.billingEffort },
-                    customfield_11018 = new customfield_11018 { value = requestTaskDetails.workstream },
-                    customfield_10841 = requestTaskDetails.actualStartDate,
-                    customfield_10842 = requestTaskDetails.actualEndDate,
-                    customfield_10828 = new customfield_10828 { value = requestTaskDetails.status },
-                    customfield_10829 = new customfield_10829 { value = requestTaskDetails.subStatus },
-                    // customfield_10088 = new customfield_10088 { value = requestTaskDetails.activityType },
-                    priority = new priority { name = requestTaskDetails.priority },
-                    customfield_10691 = new customfield_10691 { value = requestTaskDetails.countryDropdown },
-                    duedate = requestTaskDetails.dueDate,
-                    customfield_10689 = requestTaskDetails.prodReleaseDate,
-                    customfield_10831 = requestTaskDetails.sdTicketNo,
-                    customfield_10108 = new string[] { requestTaskDetails.requesterDetails }
-
-
-                };
-
-                var fieldsObject = new { fields };
-                var jsonString = JsonConvert.SerializeObject(fieldsObject);
-                request.AddHeader("Accept", "application/json");
-                request.AddHeader("Cache-Control", "no-cache");
-                request.AddHeader("Content-Type", "application/json");
-                request.AddParameter("application/json", jsonString, ParameterType.RequestBody);
-
-                var response = client.Execute(request);
-                responseString = JsonConvert.SerializeObject(response.Content);
-                
-
-                // Call the TriggerEmail function to check if email should be triggered
-                var emailResponse = TriggerEmail(response, jsonString, requestTaskDetails.assigneeUpn);
-                return Json(emailResponse);
-            }
-            
-            
-            
-            
-            
-            
-            
-            
-            
-             public string TriggerEmail(IRestResponse response, string details, string assigneeUpn)
-        {
-            // Check if the response contains an ID, key, and self
-            JObject json = JObject.Parse(response.Content);
-            var responseString = JsonConvert.SerializeObject(response.Content);
-
-            //Assinge firstName and lastName 
-            List<assignee_accountid> assigneeDetails = new List<assignee_accountid>();
-            if (!string.IsNullOrEmpty(assigneeUpn))
-            {
-                assigneeDetails = GetAssigneeDetails(assigneeUpn);
-            }
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-              <div class="col-6">
-                <label for="assigneeDropdown">Assignee:</label>
-                <select class="form-control" id="assigneeDropdown" name="assigneeDropdown">
-                    <option value="">Select Assignee</option>
-                </select>
-            </div>
-            
-            
-            
-            
-            function GetAssignees() {
+ function GetCountry() {
+            // Make an AJAX call to the GetCountry method to get the country list.
             $.ajax({
-                url: '@Url.Action("GetAssignees", "JiraTicketingTool")',
+                url: '@Url.Action("GetCountry", "JiraTicketingTool")',
                 type: 'GET',
                 success: function (result) {
+                    // Populate the dropdown with the countries.
                     var options = "";
                     for (var i = 0; i < result.length; i++) {
-                        var assignee = result[i];
-                        var optionText = assignee.name + " (" + assignee.loginId + ")";
-                        options += "<option value='" + assignee.loginId + "' data-accountid='" + assignee.accountId + "' data-upn='" + assignee.upn + "'>" + optionText + "</option>";
+                        options += "<option value='" + result[i] + "'>" + result[i] + "</option>";
                     }
-                    $('#assigneeDropdown').append(options);
+                    $('#countryDropdown').append(options);
                 },
                 error: function (xhr, status, error) {
+                    // Display an error message if the AJAX call fails.
                     console.log(xhr.responseText);
                 }
             });
         }
-        
-        
-        
-        
+
+        function submitDetails() {
+            event.preventDefault();
+            console.log('1');
+            var initiatives = $("#SelectedInitiative").find('option:selected').val();
+            var projectName = $("#SelectedProject").find('option:selected');
+            var projectJiraKey = projectName.attr('jiraKey');
+            projectName = projectName.val();
+            var epicName = $("#SelectedEpic").find('option:selected');
+            var epicIssueKey = epicName.attr('issueKey');
+            var formData = new FormData();
+
+            var taskelement = $("#SelectedTask").find('option:selected');
+            var taskOrStoryIssueKey = taskelement.attr('issueKey');
+
+
+            if (taskelement.val() == 'select') {
+                var storylement = $("#SelectedStory").find('option:selected');
+                taskOrStoryIssueKey = storylement.attr('issueKey');
+            }
+
+
+            //Option task, story, subtask, bug
+            var taskType = document.querySelector('input[name="taskStoryOpt"]:checked').value;
+            var summary = $('#summary').val();
+            var description = $('#description').val();
+
+            // Get upn & accountid
+            var assigneeDropdown = $("#assigneeDropdown").find('option:selected');
+            var assigneeAccountId = assigneeDropdown.attr('data-accountid');
+            var assigneeUpn = assigneeDropdown.attr('data-upn');
+
+            //Custome fields
+            var isBacklog = $("#isBacklog").find('option:selected').val();
+            var ragStatus = $("#ragStatus").find('option:selected').val();
+            var billingEffort = $("#billingEffort").find('option:selected').val();
+            var workstream = $("#projectCategory").find('option:selected').val();
+
+
+            //Dates
+            var actualStartDate = $("#actualStartDate").val();
+            var actualEndDate = $("#actualEndDate").val();
+            var prodReleaseDate = $("#prodReleaseDate").val();
+            var dueDate = $("#dueDate").val();
+
+
+            var status = $("#SelectedStatus").find('option:selected').val();
+            var subStatus = $("#SelectedSubStatus").find('option:selected').val();
+            // var activityType = $("#activityTypeDropdown").find('option:selected').val();
+            var priority = $("#priority").find('option:selected').val();
+            //countryDropdown
+            var countryDropdown = $("#countryDropdown").find('option:selected').val();
+
+            // Get the value of sdTicketNo
+            var sdTicketNo = $('#sdTicketNo').val();
+            var requesterDetails = $('#requesterDetails').val();
+
+
+
+
+
+            console.log(initiatives, projectName, projectJiraKey, epicIssueKey, taskOrStoryIssueKey);
+            formData.append('projectJiraKey', projectJiraKey);
+            if (taskType == "Task" || taskType == "Story") {
+                formData.append('issueKey', null);
+                formData.append('epicIssueKey', epicIssueKey);
+            } else {
+                formData.append('epicIssueKey', null);
+                formData.append('issueKey', taskOrStoryIssueKey);
+            }
+            formData.append('taskType', taskType);
+
+            formData.append('summary', summary);
+            formData.append('description', description);
+
+
+            formData.append('isBacklog', isBacklog);
+            formData.append('ragStatus', ragStatus);
+            formData.append('billingEffort', billingEffort);
+            formData.append('workstream', workstream);
+
+            formData.append('actualStartDate', actualStartDate);
+            formData.append('actualEndDate', actualEndDate);
+            formData.append('prodReleaseDate', prodReleaseDate);
+            formData.append('dueDate', dueDate);
+
+            formData.append('status', status);
+            formData.append('subStatus', subStatus);
+            // formData.append('activityType', activityType);
+            formData.append('priority', priority);
+            formData.append('countryDropdown', countryDropdown);
+            formData.append('sdTicketNo', sdTicketNo);
+
+            formData.append('requesterDetails', requesterDetails);
+
+            formData.append('assigneeAccountId', assigneeAccountId);
+            formData.append('assigneeUpn', assigneeUpn);
+
+            //  New code to send a post request with Basic Authentication
+            $.ajax({
+                url: '@Url.Action("CreateJiraTicket", "JiraTicketingTool")',
+                // data: { projectJiraKey: projectJiraKey, epicIssueKey: epicIssueKey, taskType: taskType, issueKey: taskOrStoryIssueKey },
+                //data: JSON.stringify({ requestTaskDetails: requestData }),
+                type: 'POST',
+                processData: false,
+                contentType: false,
+                async: true,
+                cache: false,
+                data: formData,
+                success: function (data) {
+                    console.log(data);
+                    showEndPageView(data);
+                },
+                error: function (data) {
+                    alert(data);
+                }
+            });
+            return false;
+        }
+
         function showEndPageView(isMessage) {
             var url = '@Url.Action("EndPage", "JiraTicketingTool", new { isMessage = "__id__" })';
             window.location.href = url.replace('__id__', isMessage);
