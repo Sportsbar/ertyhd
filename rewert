@@ -1,130 +1,163 @@
-//$(document).ready(function () {
-    // Date validation
-    function StartDatehandler(e) {
-        var actualEndDate = $("#actualEndDate").val();
-        if (actualEndDate != null && actualEndDate != '') {
-            var endDate = new Date($('#actualEndDate').val());
+public IActionResult GetAssignees()
+        {
+            try
+            {
+                var assignees = _context.assignee_accountid
+                    .Select(a => new { a.accountId, a.upn, a.name, a.loginId, a.employee_email })
+                    .ToList();
 
-            if (e.target.value != '') {
-                var startDate = new Date(e.target.value);
-                if (startDate > endDate) {
-                    // Show notification
-                    showNotification("Please select Actual End Date greater than start date", "danger");
-                    $("#actualEndDate").val('');
-                }
-            } else {
-                showNotification("Please select Actual End Date", "danger");
-                e.target.value = '';
+                return Json(assignees);
+            }
+            catch (Exception ex)
+            {
+                return Json(new { error = ex.Message });
             }
         }
-    }
+        
+         public List<assignee_accountid> GetAssigneeDetails(string upn)
+        {
+            List<assignee_accountid> assigneeDetails = new List<assignee_accountid>();
+            assigneeDetails = _context.assignee_accountid
+                .Where(e => e.upn == upn)
+                .Select(e => new assignee_accountid { name = e.name, employee_email= e.employee_email })
+                .ToList();
 
-    function EndDatehandler(e) {
-        var actualStartDate = $("#actualStartDate").val();
-        if (actualStartDate != null && actualStartDate != '') {
-            var startDate = new Date($('#actualStartDate').val());
+            return assigneeDetails;
+        }
 
-            if (e.target.value != '') {
-                var endDate = new Date(e.target.value);
-                if (startDate > endDate) {
-                    // Show notification
-                    showNotification("Please select Actual End Date greater than start date", "danger");
-                    e.target.value = '';
-                }
-            } else {
-                showNotification("Please select Actual End Date", "danger");
-                e.target.value = '';
+
+
+ #region Create Ticket
+        [HttpPost]
+        public IActionResult CreateJiraTicket(RequestTaskDetails requestTaskDetails)
+        {
+            var responseString = string.Empty;
+            try
+            {
+                string username = _configuration["JiraSettings:Username"];
+                string password = _configuration["JiraSettings:Password"];
+                string URL = _configuration["JiraSettings:URL"];
+
+                var client = new RestClient("https://" + URL + "/rest/api/2/issue/");
+                client.Authenticator = new HttpBasicAuthenticator(username, password);
+
+                var request = new RestRequest(Method.POST);
+
+
+                var fields = new Fields
+                {
+                    description = requestTaskDetails.description,
+                    summary = requestTaskDetails.summary,
+                    project = new Project { key = requestTaskDetails.projectJiraKey },
+                    issuetype = new IssueType { name = requestTaskDetails.taskType },
+                    parent = new Parent { key = requestTaskDetails.epicIssueKey != "null" ? requestTaskDetails.epicIssueKey : requestTaskDetails.issueKey },
+                    assignee = new Assignee { emailAddress = requestTaskDetails.assigneeUpn, accountId =requestTaskDetails.assigneeAccountId },
+                    customfield_10925 = new customfield_10925 { value = requestTaskDetails.isBacklog },
+                    customfield_10658 = new customfield_10658 { value = requestTaskDetails.ragStatus },
+                    customfield_10843 = new customfield_10843 { value = requestTaskDetails.billingEffort },
+                    customfield_11018 = new customfield_11018 { value = requestTaskDetails.workstream },
+                    customfield_10841 = requestTaskDetails.actualStartDate,
+                    customfield_10842 = requestTaskDetails.actualEndDate,
+                    customfield_10828 = new customfield_10828 { value = requestTaskDetails.status },
+                    customfield_10829 = new customfield_10829 { value = requestTaskDetails.subStatus },
+                    // customfield_10088 = new customfield_10088 { value = requestTaskDetails.activityType },
+                    priority = new priority { name = requestTaskDetails.priority },
+                    customfield_10691 = new customfield_10691 { value = requestTaskDetails.countryDropdown },
+                    duedate = requestTaskDetails.dueDate,
+                    customfield_10689 = requestTaskDetails.prodReleaseDate,
+                    customfield_10831 = requestTaskDetails.sdTicketNo,
+                    customfield_10108 = new string[] { requestTaskDetails.requesterDetails }
+
+
+                };
+
+                var fieldsObject = new { fields };
+                var jsonString = JsonConvert.SerializeObject(fieldsObject);
+                request.AddHeader("Accept", "application/json");
+                request.AddHeader("Cache-Control", "no-cache");
+                request.AddHeader("Content-Type", "application/json");
+                request.AddParameter("application/json", jsonString, ParameterType.RequestBody);
+
+                var response = client.Execute(request);
+                responseString = JsonConvert.SerializeObject(response.Content);
+                
+
+                // Call the TriggerEmail function to check if email should be triggered
+                var emailResponse = TriggerEmail(response, jsonString, requestTaskDetails.assigneeUpn);
+                return Json(emailResponse);
             }
-        }
-        else {
-            showNotification("Please select Actual Start Date", "danger");
-            e.target.value = '';
-        }
-    }
+            
+            
+            
+            
+            
+            
+            
+            
+            
+             public string TriggerEmail(IRestResponse response, string details, string assigneeUpn)
+        {
+            // Check if the response contains an ID, key, and self
+            JObject json = JObject.Parse(response.Content);
+            var responseString = JsonConvert.SerializeObject(response.Content);
 
-    // Production Release date
-    function ProdRelaseDatehandler(e) {
-        var actualEndDate = $("#actualEndDate").val();
-        if (actualEndDate != null && actualEndDate != '') {
-            var endDate = new Date($('#actualEndDate').val());
-
-            if (e.target.value != '') {
-                var prodDate = new Date(e.target.value);
-                if (prodDate < endDate) {
-                    // Show notification
-                    showNotification("Please select Production Release Date greater than end date", "danger");
-                    e.target.value = '';
-                }
-            } else {
-                showNotification("Please select Production Release Date", "danger");
+            //Assinge firstName and lastName 
+            List<assignee_accountid> assigneeDetails = new List<assignee_accountid>();
+            if (!string.IsNullOrEmpty(assigneeUpn))
+            {
+                assigneeDetails = GetAssigneeDetails(assigneeUpn);
             }
-        } else {
-            showNotification("Please select Actual End Date first", "danger");
-            e.target.value = '';
-        }
-    }
-
-    // Helper function to show notifications
-    function showNotification(message, type) {
-        // Create notification element
-        var notification = $('<div class="notification"></div>').addClass('notification-' + type).text(message);
-
-        // Add to page
-        $('body').append(notification);
-
-        // Fade out after 3 seconds
-        setTimeout(function () {
-            notification.fadeOut(function () {
-                $(this).remove();
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+              <div class="col-6">
+                <label for="assigneeDropdown">Assignee:</label>
+                <select class="form-control" id="assigneeDropdown" name="assigneeDropdown">
+                    <option value="">Select Assignee</option>
+                </select>
+            </div>
+            
+            
+            
+            
+            function GetAssignees() {
+            $.ajax({
+                url: '@Url.Action("GetAssignees", "JiraTicketingTool")',
+                type: 'GET',
+                success: function (result) {
+                    var options = "";
+                    for (var i = 0; i < result.length; i++) {
+                        var assignee = result[i];
+                        var optionText = assignee.name + " (" + assignee.loginId + ")";
+                        options += "<option value='" + assignee.loginId + "' data-accountid='" + assignee.accountId + "' data-upn='" + assignee.upn + "'>" + optionText + "</option>";
+                    }
+                    $('#assigneeDropdown').append(options);
+                },
+                error: function (xhr, status, error) {
+                    console.log(xhr.responseText);
+                }
             });
-        }, 3000);
-    }
-
-
-    //250 Character only for description
-
-    function updateCharCount(textarea) {
-        var charCount = document.getElementById("charCount");
-        var remainingChars = 250 - textarea.value.length;
-        charCount.innerHTML = textarea.value.length;
-        if (remainingChars < 0) {
-            charCount.style.color = "red";
-        } else {
-            charCount.style.color = "inherit";
         }
-    }
-    //Hyphein only
-    function validateInput() {
-        var inputField = document.getElementById("requesterDetails");
-        var input = inputField.value.trim();
-        var regex = /^[A-Za-z0-9_]+$/;
-        var errorDiv = document.getElementById("inputError");
-        var helpText = document.getElementById("helpText");
-
-        if (!regex.test(input)) {
-            inputField.classList.add("is-invalid");
-            errorDiv.style.display = "block";
-            helpText.style.display = "none";
-            input = "";
-        } else {
-            inputField.classList.remove("is-invalid");
-            errorDiv.style.display = "none";
-            helpText.style.display = "block";
+        
+        
+        
+        
+        function showEndPageView(isMessage) {
+            var url = '@Url.Action("EndPage", "JiraTicketingTool", new { isMessage = "__id__" })';
+            window.location.href = url.replace('__id__', isMessage);
         }
+    </script>
     }
-
-    // Attach event listeners
-    document.getElementById("actualStartDate").addEventListener("blur", StartDatehandler);
-    document.getElementById("actualEndDate").addEventListener("blur", EndDatehandler);
-    document.getElementById("prodReleaseDate").addEventListener("blur", ProdRelaseDatehandler);
-    document.getElementById("description").addEventListener("keyup", function () {
-        updateCharCount(this);
-    });
-    document.getElementById("requesterDetails").addEventListener("blur", function () {
-        validateInput();
-    });
-//});
-
-
-
-
