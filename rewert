@@ -1,66 +1,130 @@
-using MvcFormAuthentication_Demo.Models;  
-using System;  
-using System.Collections.Generic;  
-using System.Linq;  
-using System.Web;  
-using System.Web.Mvc;  
-using System.Web.Security;  
-  
-namespace MvcFormAuthentication_Demo.Controllers  
-{  
-      
-    public class HomeController : Controller  
-    {  
-        private readonly EmployeeContext _dbContext = new EmployeeContext();  
-        public ActionResult Index()  
-        {  
-            return View();  
-        }  
-        public ActionResult Login()  
-        {  
-            return View();  
-        }  
-        [HttpPost]  
-        [ValidateAntiForgeryToken]  
-        public ActionResult Login(UserModel user)  
-        {  
-            if (ModelState.IsValid)  
-            {  
-                bool IsValidUser = _dbContext.Users  
-               .Any(u => u.Username.ToLower() == user  
-               .Username.ToLower() && user  
-               .Password == user.Password);  
-  
-                if (IsValidUser)  
-                {  
-                    FormsAuthentication.SetAuthCookie(user.Username, false);  
-                    return RedirectToAction("Index", "Employee");  
-                }  
-            }  
-            ModelState.AddModelError("", "invalid Username or Password");  
-            return View();  
-        }  
-        public ActionResult Register()  
-        {  
-            return View();  
-        }  
-        [HttpPost]  
-        [ValidateAntiForgeryToken]  
-        public ActionResult Register(User registerUser)  
-        {  
-            if (ModelState.IsValid)  
-            {  
-                _dbContext.Users.Add(registerUser);  
-                _dbContext.SaveChanges();  
-                return RedirectToAction("Login");  
-  
-            }  
-            return View();  
-        }  
-        public ActionResult Logout()  
-        {  
-            FormsAuthentication.SignOut();  
-            return RedirectToAction("Login");  
-        }  
-    }  
-}  
+//$(document).ready(function () {
+    // Date validation
+    function StartDatehandler(e) {
+        var actualEndDate = $("#actualEndDate").val();
+        if (actualEndDate != null && actualEndDate != '') {
+            var endDate = new Date($('#actualEndDate').val());
+
+            if (e.target.value != '') {
+                var startDate = new Date(e.target.value);
+                if (startDate > endDate) {
+                    // Show notification
+                    showNotification("Please select Actual End Date greater than start date", "danger");
+                    $("#actualEndDate").val('');
+                }
+            } else {
+                showNotification("Please select Actual End Date", "danger");
+                e.target.value = '';
+            }
+        }
+    }
+
+    function EndDatehandler(e) {
+        var actualStartDate = $("#actualStartDate").val();
+        if (actualStartDate != null && actualStartDate != '') {
+            var startDate = new Date($('#actualStartDate').val());
+
+            if (e.target.value != '') {
+                var endDate = new Date(e.target.value);
+                if (startDate > endDate) {
+                    // Show notification
+                    showNotification("Please select Actual End Date greater than start date", "danger");
+                    e.target.value = '';
+                }
+            } else {
+                showNotification("Please select Actual End Date", "danger");
+                e.target.value = '';
+            }
+        }
+        else {
+            showNotification("Please select Actual Start Date", "danger");
+            e.target.value = '';
+        }
+    }
+
+    // Production Release date
+    function ProdRelaseDatehandler(e) {
+        var actualEndDate = $("#actualEndDate").val();
+        if (actualEndDate != null && actualEndDate != '') {
+            var endDate = new Date($('#actualEndDate').val());
+
+            if (e.target.value != '') {
+                var prodDate = new Date(e.target.value);
+                if (prodDate < endDate) {
+                    // Show notification
+                    showNotification("Please select Production Release Date greater than end date", "danger");
+                    e.target.value = '';
+                }
+            } else {
+                showNotification("Please select Production Release Date", "danger");
+            }
+        } else {
+            showNotification("Please select Actual End Date first", "danger");
+            e.target.value = '';
+        }
+    }
+
+    // Helper function to show notifications
+    function showNotification(message, type) {
+        // Create notification element
+        var notification = $('<div class="notification"></div>').addClass('notification-' + type).text(message);
+
+        // Add to page
+        $('body').append(notification);
+
+        // Fade out after 3 seconds
+        setTimeout(function () {
+            notification.fadeOut(function () {
+                $(this).remove();
+            });
+        }, 3000);
+    }
+
+
+    //250 Character only for description
+
+    function updateCharCount(textarea) {
+        var charCount = document.getElementById("charCount");
+        var remainingChars = 250 - textarea.value.length;
+        charCount.innerHTML = textarea.value.length;
+        if (remainingChars < 0) {
+            charCount.style.color = "red";
+        } else {
+            charCount.style.color = "inherit";
+        }
+    }
+    //Hyphein only
+    function validateInput() {
+        var inputField = document.getElementById("requesterDetails");
+        var input = inputField.value.trim();
+        var regex = /^[A-Za-z0-9_]+$/;
+        var errorDiv = document.getElementById("inputError");
+        var helpText = document.getElementById("helpText");
+
+        if (!regex.test(input)) {
+            inputField.classList.add("is-invalid");
+            errorDiv.style.display = "block";
+            helpText.style.display = "none";
+            input = "";
+        } else {
+            inputField.classList.remove("is-invalid");
+            errorDiv.style.display = "none";
+            helpText.style.display = "block";
+        }
+    }
+
+    // Attach event listeners
+    document.getElementById("actualStartDate").addEventListener("blur", StartDatehandler);
+    document.getElementById("actualEndDate").addEventListener("blur", EndDatehandler);
+    document.getElementById("prodReleaseDate").addEventListener("blur", ProdRelaseDatehandler);
+    document.getElementById("description").addEventListener("keyup", function () {
+        updateCharCount(this);
+    });
+    document.getElementById("requesterDetails").addEventListener("blur", function () {
+        validateInput();
+    });
+//});
+
+
+
+
