@@ -1,21 +1,21 @@
-function GetAssignees() {
-    $.ajax({
-        url: '@Url.Action("GetAssignees", "JiraTicketingTool")',
-        type: 'GET',
-        success: function (result) {
-            var options = "";
-            for (var i = 0; i < result.length; i++) {
-                var assignee = result[i];
-                var optionText = assignee.name + " (" + assignee.loginId + ")";
-                options += "<option value='" + assignee.loginId + "' data-accountid='" + assignee.accountId + "' data-upn='" + assignee.upn + "'>" + optionText + "</option>";
-            }
-            $('#assigneeDropdown').append(options);
-            
-            // Initialize Select2 plugin
-            $('#assigneeDropdown').select2();
-        },
-        error: function (xhr, status, error) {
-            console.log(xhr.responseText);
-        }
-    });
+public class FirstController : Controller
+{
+    // GET: First
+    public ActionResult Index()
+    {
+        Session["Message"] = "Hello MVC!";
+        return View();
+    }
 }
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width"/>
+    <title>Index</title>
+</head>
+<body>
+    <div>
+        @Session["Message"]
+    </div>
+</body>
+</html>
