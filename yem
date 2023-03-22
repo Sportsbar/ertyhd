@@ -1,63 +1,389 @@
-using BasicAuth.Services;
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
+using Microsoft.EntityFrameworkCore;
+using System.Collections.Generic;
+using System.Reflection.Emit;
+
+namespace BasicAuth.Model
+{
+    public class RestAPIDbContext : DbContext
+    {
+        public RestAPIDbContext(DbContextOptions<RestAPIDbContext> options)
+            : base(options)
+        {
+        }
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+
+            // This line configures the 'JiraTaskDetails' entity to not have a primary key
+            // This is necessary because the 'JiraTaskDetails' table does not have a primary key column
+
+
+            modelBuilder.Entity<ApiData>().HasNoKey();
+         
+        }
+
+        public DbSet<ApiData> ApiData { get; set; }
+       
+    }
+}
+
+
+
+
+
+
+
+
+
+namespace BasicAuth.Model
+{
+    public enum HTTPStatusCode
+    {
+        Success = 200,
+        Exception = 500,
+        Validation = 400
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Interfaces:
+
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net.Http.Headers;
-using System.Security.Claims;
-using System.Text;
-using System.Text.Encodings.Web;
 using System.Threading.Tasks;
 
-namespace BasicAuth.API
+namespace BasicAuth.Services
 {
-    public class BasicAuthenticationHandler : AuthenticationHandler<AuthenticationSchemeOptions>
+   public interface IUserService
     {
-        #region Property
-        readonly IUserService _userService;
-        #endregion
+        bool ValidateCredentials(string username, string password);
+    }
+}
 
-        #region Constructor
-        public BasicAuthenticationHandler(IUserService userService,
-            IOptionsMonitor<AuthenticationSchemeOptions> options,
-            ILoggerFactory logger,
-            UrlEncoder encoder,
-            ISystemClock clock)
-            : base(options, logger, encoder, clock)
+
+
+
+
+
+
+
+
+
+
+
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+
+namespace BasicAuth.Services
+{
+    public class UserService : IUserService 
+    {
+        public bool ValidateCredentials(string username, string password)
         {
-            _userService = userService;
+            return username.Equals("admin") && password.Equals("Pa$$WoRd");
         }
-        #endregion
+    }
+}
 
-        protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+
+namespace BasicAuth
+{
+    public class Program
+    {
+        public static void Main(string[] args)
         {
-            string username = null;
+            CreateHostBuilder(args).Build().Run();
+        }
+
+        public static IHostBuilder CreateHostBuilder(string[] args) =>
+            Host.CreateDefaultBuilder(args)
+                .ConfigureWebHostDefaults(webBuilder =>
+                {
+                    webBuilder.UseStartup<Startup>();
+                });
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+using BasicAuth.API;
+using BasicAuth.Model;
+using BasicAuth.Services;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+//using Microsoft.AspNetCore.HttpsPolicy;
+//using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+//using Microsoft.Extensions.Logging;
+using Microsoft.OpenApi.Models;
+//using System;
+//using System.Collections.Generic;
+//using System.Linq;
+//using System.Threading.Tasks;
+
+namespace BasicAuth
+{
+    public class Startup
+    {
+        public Startup(IConfiguration configuration)
+        {
+            Configuration = configuration;
+        }
+
+        public IConfiguration Configuration { get; }
+
+        // This method gets called by the runtime. Use this method to add services to the container.
+        public void ConfigureServices(IServiceCollection services)
+        {
+
+            services.AddControllers();
+
+            #region Configure Swagger
+            services.AddSwaggerGen(c =>
+            {
+                c.SwaggerDoc("v1", new OpenApiInfo { Title = "BasicAuth", Version = "v1" });
+                c.AddSecurityDefinition("basic", new OpenApiSecurityScheme
+                {
+                    Name = "Authorization",
+                    Type = SecuritySchemeType.Http,
+                    Scheme = "basic",
+                    In = ParameterLocation.Header,
+                    Description = "Basic Authorization header using the Bearer scheme."
+                });
+                c.AddSecurityRequirement(new OpenApiSecurityRequirement
+                {
+                    {
+                          new OpenApiSecurityScheme
+                            {
+                                Reference = new OpenApiReference
+                                {
+                                    Type = ReferenceType.SecurityScheme,
+                                    Id = "basic"
+                                }
+                            },
+                            new string[] {}
+                    }
+                });
+            });
+            #endregion
+
+            services.AddAuthentication("BasicAuthentication")
+    .AddScheme<AuthenticationSchemeOptions, BasicAuthenticationHandler>("BasicAuthentication", null);
+
+            services.AddScoped<IUserService, UserService>();
+            services.AddDbContext<RestAPIDbContext>(options =>
+            options.UseSqlServer(Configuration.GetConnectionString("RestAPIDb")));
+
+        }
+
+        // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+        {
+            if (env.IsDevelopment())
+            {
+                app.UseDeveloperExceptionPage();
+                app.UseSwagger();
+                app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "BasicAuth v1"));
+            }
+
+            app.UseHttpsRedirection();
+
+            app.UseRouting();
+            app.UseAuthentication();
+            app.UseAuthorization();
+
+            app.UseEndpoints(endpoints =>
+            {
+                endpoints.MapControllers();
+            });
+        }
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net;
+using System.Threading.Tasks;
+using Swashbuckle.AspNetCore.Annotations;
+using BasicAuth.Model;
+using Microsoft.EntityFrameworkCore;
+
+namespace BasicAuth.Controllers
+{
+    [Authorize]
+    [ApiController]
+    [Route("api")]
+    public class ApiController : ControllerBase
+    {
+        private readonly RestAPIDbContext _context;
+
+        public ApiController(RestAPIDbContext context)
+        {
+            _context = context;
+        }
+
+        [HttpGet]
+        [ProducesResponseType(typeof(ApiData), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
+        [SwaggerResponse(statusCode: (int)HTTPStatusCode.Validation, description: "Validation Exception occured")]
+        public async Task<ActionResult<IEnumerable<ApiData>>> GetApiData()
+        {
             try
             {
-                var authHeader = AuthenticationHeaderValue.Parse(Request.Headers["Authorization"]);
-                var credentials = Encoding.UTF8.GetString(Convert.FromBase64String(authHeader.Parameter)).Split(':');
-                username = credentials.FirstOrDefault();
-                var password = credentials.LastOrDefault();
-
-                if (!_userService.ValidateCredentials(username, password))
-                    throw new ArgumentException("Invalid credentials");
+                var apiData = await _context.ApiData.ToListAsync();
+                return Ok(apiData);
             }
             catch (Exception ex)
             {
-                return AuthenticateResult.Fail($"Authentication failed: {ex.Message}");
+                return StatusCode(StatusCodes.Status500InternalServerError, $"Error retrieving API data: {ex.Message}");
             }
-
-            var claims = new[] {
-                new Claim(ClaimTypes.Name, username)
-            };
-            var identity = new ClaimsIdentity(claims, Scheme.Name);
-            var principal = new ClaimsPrincipal(identity);
-            var ticket = new AuthenticationTicket(principal, Scheme.Name);
-
-            return AuthenticateResult.Success(ticket);
         }
-
     }
 }
