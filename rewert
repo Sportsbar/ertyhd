@@ -1,28 +1,48 @@
-public class FirstController : Controller
+using EmployeePortal.API.Entities;
+using EmployeePortal.API.Interfaces;
+using Microsoft.AspNetCore.Mvc;
+
+[ApiController]
+[Route("api/employees")]
+public class EmployeesController : ControllerBase
 {
-    // GET: First
-    public ActionResult Index()
+    private readonly IDapperService<Employee> _employeeRepository;
+    private readonly IDapperService<ccms_employee> _ccmsemployeeRepository;
+
+    public EmployeesController(IDapperService<Employee> employeeRepository, IDapperService<ccms_employee> ccmsemployeeRepository)
     {
-        Session["Message"] = "Hello MVC!";
-        return View();
+        _employeeRepository = employeeRepository;
+        _ccmsemployeeRepository = ccmsemployeeRepository;
     }
+
+
+
+    [HttpGet("ccms")]
+    public async Task<IEnumerable<ccms_employee>> GetCCMSEmployees()
+    {
+        return await _ccmsemployeeRepository.GetCCMSEmployees();
+    }
+
+    #region Testing
+    [HttpGet]
+    public async Task<IEnumerable<Employee>> GetAllEmployees()
+    {
+        return await _employeeRepository.GetEmployees();
+    }
+    
+    [HttpGet("{id}")]
+    public async Task<Employee> GetEmployeeById(int id)
+    {
+        return await _employeeRepository.GetByIdAsync(id);
+    }
+
+    [HttpGet("departments/{department}")]
+    public async Task<IEnumerable<Employee>> GetEmployeesByDepartment(string department)
+    {
+        return await _employeeRepository.GetEmployeesByDepartment(department);
+    }
+
+    #endregion
+
+
 }
-
-<html>
-<head>
-    <meta name="viewport" content="width=device-width"/>
-    <title>Index</title>
-</head>
-<body>
-    <div>
-        @Session["Message"]
-    </div>
-</body>
-</html>
-
-
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme,
-        options => builder.Configuration.Bind("JwtSettings", options))
-    .AddCookie(CookieAuthenticationDefaults.AuthenticationScheme,
-        options => builder.Configuration.Bind("CookieSettings", options));
