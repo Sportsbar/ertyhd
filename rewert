@@ -1,90 +1,9 @@
-using EmployeePortal.API.Data;
-//using EmployeePortal.API.Helpers;
-using EmployeePortal.API.Interfaces;
-using EmployeePortal.API.Middleware;
-using EmployeePortal.API.Services;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-//using Microsoft.AspNetCore.Builder;
-//using Microsoft.Extensions.Configuration;
-//using Microsoft.Extensions.DependencyInjection;
-using Microsoft.IdentityModel.Tokens;
-using System.Data;
-using System.Data.SqlClient;
-using System.Text;
-
-var builder = WebApplication.CreateBuilder(args);
-
-
-
-//Add JWT token generation
-//builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-//    .AddJwtBearer(options =>
-//    {
-//        options.TokenValidationParameters = new TokenValidationParameters
-//        {
-//            ValidateIssuer = true,
-//            ValidateAudience = true,
-//            ValidateLifetime = true,
-//            ValidateIssuerSigningKey = true,
-//            ValidIssuer = builder.Configuration.GetSection("JwtTokenGenerator")["Issuer"],
-//            ValidAudience = builder.Configuration.GetSection("JwtTokenGenerator")["Audience"],
-//            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration.GetSection("JwtTokenGenerator")["SecretKey"]))
-//        };
-//    });
-
-// Add services to the container.
-builder.Services.AddControllers();
-
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
-
-var conn = builder.Configuration.GetConnectionString("DefaultConnection");
-builder.Services.AddScoped<IDbConnection>(db => new SqlConnection(conn));
-
-// Add repositories
-builder.Services.AddTransient(typeof(IDapperService<>), typeof(DapperService<>));
-
-// Add services
-//builder.Services.AddTransient<IRepository, DapperService>();
-//builder.Services.AddSingleton(new JwtTokenGenerator(builder.Configuration.GetSection("JwtTokenGenerator")["SecretKey"]));
-
-
-// Add CORS policy
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("CorsPolicy", builder =>
-    {
-        builder.AllowAnyOrigin()
-               .AllowAnyMethod()
-               .AllowAnyHeader();
-    });
-});
-
-var app = builder.Build();
-
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
-
-// Add exception handling middleware
-app.UseMiddleware<ExceptionMiddleware>();
-
-// Add logging middleware
-app.UseMiddleware<LogMiddleware>();
-
-app.UseHttpsRedirection();
-
-app.UseAuthentication();
-
-app.UseAuthorization();
-
-app.MapControllers();
-
-// Use CORS policy
-app.UseCors("CorsPolicy");
-
-app.Run();
+CREATE PROCEDURE getccmsemploees
+AS
+BEGIN
+  SELECT hire_date, employee_ident, employee_first_name, employee_middle_name, employee_last_name, 
+    employee_common_name, program_ident, program_abbr_name, program_full_name, location_ident, 
+    location_abbr_name, location_full_name, application_date, email1, email2, grade, status, desc_grade, 
+    sex, desc_sex, maritial_status, dob
+  FROM ccms_employee
+END
