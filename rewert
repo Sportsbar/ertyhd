@@ -1,9 +1,15 @@
-CREATE PROCEDURE getccmsemploees
+CREATE PROCEDURE get_employee_by_ident
+  @employee_ident int
 AS
 BEGIN
   SELECT hire_date, employee_ident, employee_first_name, employee_middle_name, employee_last_name, 
     employee_common_name, program_ident, program_abbr_name, program_full_name, location_ident, 
     location_abbr_name, location_full_name, application_date, email1, email2, grade, status, desc_grade, 
-    sex, desc_sex, maritial_status, dob
+    sex, desc_sex, maritial_status, dob, desc_status, client_ident, client_abbr_name, client_full_name, 
+    manager_ident, manager_first_name, manager_middle_name, manager_last_name, manager_email1, company_ident, 
+    company_full_name, company_group_ident, company_group_abbr_name, company_group_full_name, 
+    position_code_group_ident, position_code_department_ident, position_code_group_full_name, 
+    position_code_department_full_name, timezone, hourly_status, emea_center, BE_insertion_date
   FROM ccms_employee
+  WHERE employee_ident = @employee_ident
 END
