@@ -1,127 +1,65 @@
-CREATE PROCEDURE get_employee_by_ident
-  @employee_ident int
-AS
-BEGIN
-  SELECT hire_date, employee_ident, employee_first_name, employee_middle_name, employee_last_name, 
-    employee_common_name, program_ident, program_abbr_name, program_full_name, location_ident, 
-    location_abbr_name, location_full_name, application_date, email1, email2, grade, status, desc_grade, 
-    sex, desc_sex, maritial_status, dob, desc_status, client_ident, client_abbr_name, client_full_name, 
-    manager_ident, manager_first_name, manager_middle_name, manager_last_name, manager_email1, company_ident, 
-    company_full_name, company_group_ident, company_group_abbr_name, company_group_full_name, 
-    position_code_group_ident, position_code_department_ident, position_code_group_full_name, 
-    position_code_department_full_name, timezone, hourly_status, emea_center, BE_insertion_date
-  FROM ccms_employee
-  WHERE employee_ident = @employee_ident
-END
-
-
-
-
-
-   private readonly IRepository<ccms_employee> _ccmsaddons;
-
-
-    public EmployeesController(IDapperService<Employee> employeeRepository, IDapperService<ccms_employee> ccmsemployeeRepository, IRepository<ccms_employee> ccmsaddons)
-    {
-        _employeeRepository = employeeRepository;
-        _ccmsemployeeRepository = ccmsemployeeRepository;
-        _ccmsaddons = ccmsaddons;
-    }
-
-
-
-    [HttpGet("ccms")]
-    public async Task<IEnumerable<ccms_employee>> GetCCMSEmployees()
-    {
-        return await _ccmsemployeeRepository.GetCCMSEmployees();
-    }
-
-    [HttpGet("ccms/{ident}")]
-    public async Task<ccms_employee> GetEmployeeByIdent(string ident)
-    {
-        return await _ccmsaddons.GetEmployeeByIdent(ident);
-    }
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    using EmployeePortal.API.Entities;
-using System.Threading.Tasks;
-
-namespace EmployeePortal.API.Interfaces
-{
-    public interface IRepository<TEntity> where TEntity : class
-    {
-        
-        Task<ccms_employee> GetEmployeeByIdent(string ident);
-    }
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-using EmployeePortal.API.Entities;
-using EmployeePortal.API.Interfaces;
-using System.Collections.Generic;
-using System.Data;
-using System.Threading.Tasks;
-using Dapper;
-
-namespace EmployeePortal.API.Data
-{
-    public class DapperRepository<TEntity> : IRepository<TEntity> where TEntity : class
-    {
-        private readonly IDbConnection _db;
-
-        public DapperRepository(IDbConnection db)
-        {
-            _db = db;
-        }
-
-
-        public async Task<ccms_employee> GetEmployeeByIdent(string ident)
-        {
-            var query = "EXEC get_employee_by_ident @ident";
-            var result = await _db.QueryAsync<ccms_employee>(query, new { ident });
-            return result.FirstOrDefault();
-        }
-
-    }
-}
-
-
-
-
-// Add services
-builder.Services.AddTransient(typeof(IDapperService<>), typeof(DapperService<>));
-
-// Add repositories
-builder.Services.AddTransient(typeof(IRepository<>), typeof(DapperRepository<>));
+using System;  
+using System.Collections.Generic;  
+using System.Data;  
+using System.Linq;  
+using System.Threading.Tasks;  
+using Dapper;  
+using Dapper_ORM.Models;  
+using Dapper_ORM.Services;  
+using Microsoft.AspNetCore.Http;  
+using Microsoft.AspNetCore.Mvc;  
+  
+namespace Dapper_ORM.Controllers  
+{  
+    [Route("api/[controller]")]  
+    [ApiController]  
+    public class HomeController : ControllerBase  
+    {  
+        private readonly IDapper _dapper;  
+        public HomeController(IDapper dapper)  
+        {  
+            _dapper = dapper;  
+        }  
+        [HttpPost(nameof(Create))]  
+        public async Task<int> Create(Parameters data)  
+        {  
+            var dbparams = new DynamicParameters();  
+            dbparams.Add("Id", data.Id, DbType.Int32);  
+            var result = await Task.FromResult(_dapper.Insert<int>("[dbo].[SP_Add_Article]"  
+                , dbparams,  
+                commandType: CommandType.StoredProcedure));  
+            return result;  
+        }  
+        [HttpGet(nameof(GetById))]  
+        public async Task<Parameters> GetById(int Id)  
+        {  
+            var result = await Task.FromResult(_dapper.Get<Parameters>($"Select * from [Dummy] where Id = {Id}", null, commandType: CommandType.Text));  
+            return result;  
+        }  
+        [HttpDelete(nameof(Delete))]  
+        public async Task<int> Delete(int Id)  
+        {  
+            var result = await Task.FromResult(_dapper.Execute($"Delete [Dummy] Where Id = {Id}", null, commandType: CommandType.Text));  
+            return result;  
+        }  
+        [HttpGet(nameof(Count))]  
+        public Task<int> Count(int num)  
+        {  
+            var totalcount = Task.FromResult(_dapper.Get<int>($"select COUNT(*) from [Dummy] WHERE Age like '%{num}%'", null,  
+                    commandType: CommandType.Text));  
+            return totalcount;  
+        }  
+        [HttpPatch(nameof(Update))]  
+        public Task<int> Update(Parameters data)  
+        {  
+            var dbPara = new DynamicParameters();  
+            dbPara.Add("Id", data.Id);  
+            dbPara.Add("Name", data.Name, DbType.String);  
+  
+            var updateArticle = Task.FromResult(_dapper.Update<int>("[dbo].[SP_Update_Article]",  
+                            dbPara,  
+                            commandType: CommandType.StoredProcedure));  
+            return updateArticle;  
+        }  
+    }  
+}  
