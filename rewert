@@ -1,48 +1,73 @@
-using EmployeePortal.API.Entities;
-using EmployeePortal.API.Interfaces;
-using Microsoft.AspNetCore.Mvc;
-
-[ApiController]
-[Route("api/employees")]
-public class EmployeesController : ControllerBase
+namespace EmployeePortal.API.Entities
 {
-    private readonly IDapperService<Employee> _employeeRepository;
-    private readonly IDapperService<ccms_employee> _ccmsemployeeRepository;
-
-    public EmployeesController(IDapperService<Employee> employeeRepository, IDapperService<ccms_employee> ccmsemployeeRepository)
+    public class ccms_employee
     {
-        _employeeRepository = employeeRepository;
-        _ccmsemployeeRepository = ccmsemployeeRepository;
+        public DateTime? hire_date { get; set; }
+        public int? employee_ident { get; set; }
+        public string employee_first_name { get; set; }
+        public string employee_middle_name { get; set; }
+        public string employee_last_name { get; set; }
+        public string employee_common_name { get; set; }
+        public int? program_ident { get; set; }
+        public string program_abbr_name { get; set; }
+        public string program_full_name { get; set; }
+        public int? location_ident { get; set; }
+        public string location_abbr_name { get; set; }
+        public string location_full_name { get; set; }
+        public string application_date { get; set; }
+        public string email1 { get; set; }
+        public string email2 { get; set; }
+        public string grade { get; set; }
+        public string status { get; set; }
+        public string desc_grade { get; set; }
+        public string sex { get; set; }
+        public string desc_sex { get; set; }
+        public string maritial_status { get; set; }
+        public string dob { get; set; }
+        public string desc_status { get; set; }
+        public int? client_ident { get; set; }
+        public string client_abbr_name { get; set; }
+        public string client_full_name { get; set; }
+        public int? manager_ident { get; set; }
+        public string manager_first_name { get; set; }
+        public string manager_middle_name { get; set; }
+        public string manager_last_name { get; set; }
+        public string manager_email1 { get; set; }
+        public int? company_ident { get; set; }
+        public string company_full_name { get; set; }
+        public int? company_group_ident { get; set; }
+        public string company_group_abbr_name { get; set; }
+        public string company_group_full_name { get; set; }
+        public int? position_code_group_ident { get; set; }
+        public int? position_code_department_ident { get; set; }
+        public string position_code_group_full_name { get; set; }
+        public string position_code_department_full_name { get; set; }
+        public string timezone { get; set; }
+        public string hourly_status { get; set; }
+        public bool? emea_center { get; set; }
+        public DateTime? BE_insertion_date { get; set; }
+        public DateTime? last_modify_date { get; set; }
+        public string PayType { get; set; }
+        public long? created { get; set; }
+        public long? updated { get; set; }
+        public int? created_ident { get; set; }
+        public int? updated_ident { get; set; }
+        public int? vp_ident { get; set; }
+        public string vp_common_name { get; set; }
+        public int? evp_ident { get; set; }
+        public string evp_common_name { get; set; }
+        public int? position_code_tpe_ident { get; set; }
+        public string position_code_type_abbr_name { get; set; }
+        public string position_code_type_full_name { get; set; }
+        public int? director_ident { get; set; }
+        public string director_common_name { get; set; }
+        public string location_type { get; set; }
+        public int? supervisor_ident { get; set; }
+        public int? accm_identt { get; set; }
+        public int? ccm_iden { get; set; }
+        public string Has_webcam { get; set; }
+
+     
+
     }
-
-
-
-    [HttpGet("ccms")]
-    public async Task<IEnumerable<ccms_employee>> GetCCMSEmployees()
-    {
-        return await _ccmsemployeeRepository.GetCCMSEmployees();
-    }
-
-    #region Testing
-    [HttpGet]
-    public async Task<IEnumerable<Employee>> GetAllEmployees()
-    {
-        return await _employeeRepository.GetEmployees();
-    }
-    
-    [HttpGet("{id}")]
-    public async Task<Employee> GetEmployeeById(int id)
-    {
-        return await _employeeRepository.GetByIdAsync(id);
-    }
-
-    [HttpGet("departments/{department}")]
-    public async Task<IEnumerable<Employee>> GetEmployeesByDepartment(string department)
-    {
-        return await _employeeRepository.GetEmployeesByDepartment(department);
-    }
-
-    #endregion
-
-
 }
