@@ -13,3 +13,115 @@ BEGIN
   FROM ccms_employee
   WHERE employee_ident = @employee_ident
 END
+
+
+
+
+
+   private readonly IRepository<ccms_employee> _ccmsaddons;
+
+
+    public EmployeesController(IDapperService<Employee> employeeRepository, IDapperService<ccms_employee> ccmsemployeeRepository, IRepository<ccms_employee> ccmsaddons)
+    {
+        _employeeRepository = employeeRepository;
+        _ccmsemployeeRepository = ccmsemployeeRepository;
+        _ccmsaddons = ccmsaddons;
+    }
+
+
+
+    [HttpGet("ccms")]
+    public async Task<IEnumerable<ccms_employee>> GetCCMSEmployees()
+    {
+        return await _ccmsemployeeRepository.GetCCMSEmployees();
+    }
+
+    [HttpGet("ccms/{ident}")]
+    public async Task<ccms_employee> GetEmployeeByIdent(string ident)
+    {
+        return await _ccmsaddons.GetEmployeeByIdent(ident);
+    }
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    using EmployeePortal.API.Entities;
+using System.Threading.Tasks;
+
+namespace EmployeePortal.API.Interfaces
+{
+    public interface IRepository<TEntity> where TEntity : class
+    {
+        
+        Task<ccms_employee> GetEmployeeByIdent(string ident);
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+using EmployeePortal.API.Entities;
+using EmployeePortal.API.Interfaces;
+using System.Collections.Generic;
+using System.Data;
+using System.Threading.Tasks;
+using Dapper;
+
+namespace EmployeePortal.API.Data
+{
+    public class DapperRepository<TEntity> : IRepository<TEntity> where TEntity : class
+    {
+        private readonly IDbConnection _db;
+
+        public DapperRepository(IDbConnection db)
+        {
+            _db = db;
+        }
+
+
+        public async Task<ccms_employee> GetEmployeeByIdent(string ident)
+        {
+            var query = "EXEC get_employee_by_ident @ident";
+            var result = await _db.QueryAsync<ccms_employee>(query, new { ident });
+            return result.FirstOrDefault();
+        }
+
+    }
+}
+
+
+
+
+// Add services
+builder.Services.AddTransient(typeof(IDapperService<>), typeof(DapperService<>));
+
+// Add repositories
+builder.Services.AddTransient(typeof(IRepository<>), typeof(DapperRepository<>));
