@@ -1,100 +1,90 @@
-using EmployeePortal.API.Entities;
-
-namespace EmployeePortal.API.Interfaces
-{
-    public interface IDapperService<TEntity> where TEntity : class
-    {
-        
-            Task<Employee> GetByIdAsync(int id);
-            Task<IEnumerable<Employee>> GetEmployees();
-            Task<IEnumerable<Employee>> GetEmployeesByDepartment(string department);
-
-            Task<IEnumerable<ccms_employee>> GetCCMSEmployees();
-
-       
-
-    }
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-using System;
-using System.Collections.Generic;
-using System.Data;
-using System.Linq;
-using System.Threading.Tasks;
-using Dapper;
-using EmployeePortal.API.Entities;
+using EmployeePortal.API.Data;
+//using EmployeePortal.API.Helpers;
 using EmployeePortal.API.Interfaces;
+using EmployeePortal.API.Middleware;
+using EmployeePortal.API.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+//using Microsoft.AspNetCore.Builder;
+//using Microsoft.Extensions.Configuration;
+//using Microsoft.Extensions.DependencyInjection;
+using Microsoft.IdentityModel.Tokens;
+using System.Data;
+using System.Data.SqlClient;
+using System.Text;
 
-namespace EmployeePortal.API.Services
+var builder = WebApplication.CreateBuilder(args);
+
+
+
+//Add JWT token generation
+//builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+//    .AddJwtBearer(options =>
+//    {
+//        options.TokenValidationParameters = new TokenValidationParameters
+//        {
+//            ValidateIssuer = true,
+//            ValidateAudience = true,
+//            ValidateLifetime = true,
+//            ValidateIssuerSigningKey = true,
+//            ValidIssuer = builder.Configuration.GetSection("JwtTokenGenerator")["Issuer"],
+//            ValidAudience = builder.Configuration.GetSection("JwtTokenGenerator")["Audience"],
+//            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration.GetSection("JwtTokenGenerator")["SecretKey"]))
+//        };
+//    });
+
+// Add services to the container.
+builder.Services.AddControllers();
+
+// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
+var conn = builder.Configuration.GetConnectionString("DefaultConnection");
+builder.Services.AddScoped<IDbConnection>(db => new SqlConnection(conn));
+
+// Add repositories
+builder.Services.AddTransient(typeof(IDapperService<>), typeof(DapperService<>));
+
+// Add services
+//builder.Services.AddTransient<IRepository, DapperService>();
+//builder.Services.AddSingleton(new JwtTokenGenerator(builder.Configuration.GetSection("JwtTokenGenerator")["SecretKey"]));
+
+
+// Add CORS policy
+builder.Services.AddCors(options =>
 {
-    public class DapperService<TEntity> : IDapperService<TEntity> where TEntity : class
+    options.AddPolicy("CorsPolicy", builder =>
     {
-        
-            private readonly IDbConnection _db;
+        builder.AllowAnyOrigin()
+               .AllowAnyMethod()
+               .AllowAnyHeader();
+    });
+});
 
-            public DapperService(IDbConnection db)
-            {
-                _db = db;
-            }
-            //Get employees by Id
-            public async Task<Employee> GetByIdAsync(int id)
-            {
-                var query = $"SELECT * FROM Employees WHERE Id = @id";
-                var parameters = new { id };
-                return await _db.QueryFirstOrDefaultAsync<Employee>(query, parameters);
-            }
+var app = builder.Build();
 
-            //Get entire employees Table
-            public async Task<IEnumerable<Employee>> GetEmployees()
-            {
-                var query = "SELECT * FROM Employees";
-                return await _db.QueryAsync<Employee>(query);
-            }
-            //Get employee list by branch
-            public async Task<IEnumerable<Employee>> GetEmployeesByDepartment(string department)
-            {
-                var parameters = new { Department = department };
-                var query = "EXEC GetEmployeesByDepartment @Department";
-
-                return await _db.QueryAsync<Employee>(query, parameters);
-            }
-
-            public async Task<IEnumerable<ccms_employee>> GetCCMSEmployees()
-            {
-                var query = "EXEC Getccmsemployees";
-
-                return await _db.QueryAsync<ccms_employee>(query);
-            }
-
-
-        
-
-
-
-    }
+// Configure the HTTP request pipeline.
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
 }
+
+// Add exception handling middleware
+app.UseMiddleware<ExceptionMiddleware>();
+
+// Add logging middleware
+app.UseMiddleware<LogMiddleware>();
+
+app.UseHttpsRedirection();
+
+app.UseAuthentication();
+
+app.UseAuthorization();
+
+app.MapControllers();
+
+// Use CORS policy
+app.UseCors("CorsPolicy");
+
+app.Run();
