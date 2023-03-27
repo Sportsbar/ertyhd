@@ -1,27 +1,24 @@
-Data: This folder contains the DapperRepository class, which implements the IRepository interface. This repository class is responsible for interacting with the database and fetching the required data from it.
+import { MsalService } from '@azure/msal-angular';
+import { Component, OnInit } from '@angular/core';
 
-Dto: No Dto folder has been provided in the code snippet.
+@Component({
+  selector: 'app-restricted-page',
+  templateUrl: './restricted-page.component.html',
+  styleUrls: ['./restricted-page.component.css']
+})
+export class RestrictedPageComponent implements OnInit {
 
-Entities: This folder contains the ccms_employee entity class, which represents the structure of the ccms_employee table in the database.
+  constructor(private authService: MsalService) { }
 
-Extensions: It can considt of extension methods like DateTimeExtensions.It will allow us to add new methods to an existing class or interface without modifying the source code
+  getName () : string {
+    if (this.authService.instance.getActiveAccount() == null) {
+      return 'unknown'
+    }
 
-Helpers: Can be used for encryption/decryption,  data validation.I have created JwtTokenGenerator class to generate JSON Web Tokens  for authentication and authorization purposes. Its a secure way of transmitting information between parties as a JSON object.
+    return this.authService.instance.getActiveAccount().name
+  }
 
-JWTToken:
+  ngOnInit(): void {
+  }
 
-
-Interfaces: This folder contains the IRepository interface, which defines the basic CRUD (Create, Read, Update, Delete) operations that a repository should implement.
-
-Middleware: 
-
-ExceptionMiddleware is for any unhandled exceptions that occur during the processing of a request and returns an error response to the client. It logs the exception using an instance of the ILogger interface provided by the ASP.NET Core framework.
-
-LogMiddleware  logs information about incoming requests and outgoing responses. It logs the HTTP method, request path, and response status code using an instance of the ILogger interface provided by the ASP.NET Core framework.
-
-Services: This folder contains the IDapperService interface, which defines the additional methods that a repository can implement using Dapper ORM.
-
-
-
-=>  Entities, Interfaces, and Data folders are directly related to the Repository Pattern
-=> Services folder is also related to the Repository Pattern but it defines the additional methods that a repository can implement using a specific ORM (Dapper in this case)
+}
