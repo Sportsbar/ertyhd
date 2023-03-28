@@ -1,16 +1,144 @@
-<Project Sdk="Microsoft.NET.Sdk">
+using EmployeePortal.API.Entities;
+using EmployeePortal.API.Interfaces;
+using Microsoft.AspNetCore.Mvc;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
-  <PropertyGroup>
-    <TargetFramework>$(DefaultNetCoreTargetFramework)</TargetFramework>
-    <IsShippingPackage>false</IsShippingPackage>
-    <IsPackable>true</IsPackable>
-    <PackageId>$(TargetingPackName).Internal</PackageId>
-    <VersionPrefix>$(TargetingPackVersionPrefix)</VersionPrefix>
-    <CopyBuildOutputToOutputDirectory>false</CopyBuildOutputToOutputDirectory>
-    <GenerateDocumentationFile>false</GenerateDocumentationFile>
-    <IncludeBuildOutput>false</IncludeBuildOutput>
-    <IncludeSymbols>false</IncludeSymbols>
-    <NoPackageAnalysis>true</NoPackageAnalysis>
-  </PropertyGroup>
+[ApiController]
+[Route("api/employees")]
+public class EmployeesController : ControllerBase
+{
+    private readonly IDapperService<ccms_employee> _ccmsemployeeService;
+    private readonly IRepository<ccms_employee> _ccmsRepository;
 
-</Project>
+    public EmployeesController(IDapperService<ccms_employee> ccmsemployeeService, IRepository<ccms_employee> ccmsRepository)
+    {
+        _ccmsemployeeService = ccmsemployeeService;
+        _ccmsRepository = ccmsRepository;
+    }
+
+    [HttpGet("ccms")]
+    public async Task<object> GetCCMSEmployees()
+    {
+        return await _ccmsemployeeService.GetCCMSEmployees();
+    }
+
+    [HttpGet("ccms/{ident}")]
+    public async Task<object> GetEmployeeByIdent(string ident)
+    {
+        return await _ccmsRepository.GetEmployeeByIdent(ident);
+    }
+
+    [HttpGet("dualdb/{name}")]
+    public async Task<object> GetDatabasefortestingdualenvironment(string name)
+    {
+        return await _ccmsRepository.GetDatabasefortestingdualenvironment(name);
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+using EmployeePortal.API.Entities;
+using EmployeePortal.API.Interfaces;
+using System.Collections.Generic;
+using System.Data;
+using System.Threading.Tasks;
+using Dapper;
+using System.Data.SqlClient;
+
+namespace EmployeePortal.API.Data
+{
+    public class DapperRepository<TEntity> : IRepository<TEntity> where TEntity : class
+    {
+
+        private readonly IConfiguration _configuration;
+
+        public DapperRepository(IConfiguration configuration)
+        {
+
+            _configuration = configuration;
+        }
+
+        public async Task<object> GetEmployeeByIdent(string employee_ident)
+        {
+            using var connection = new SqlConnection(_configuration.GetConnectionString("DefaultConnection"));
+            var result = await connection.QueryAsync("get_employee_by_ident", new { employee_ident }, commandType: CommandType.StoredProcedure);
+            return result.Cast<object>().FirstOrDefault();
+        }
+
+
+        public async Task<object> GetDatabasefortestingdualenvironment(string name)
+        {
+            using var connection = new SqlConnection(_configuration.GetConnectionString("SecondDbConnectionS"));
+            var result = await connection.QueryAsync("sel_dualdbPro", new { name }, commandType: CommandType.StoredProcedure);
+            return result.Cast<object>();
+        }
+
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+using EmployeePortal.API.Entities;
+
+namespace EmployeePortal.API.Interfaces
+{
+    public interface IDapperService<TEntity> where TEntity : class
+    {
+        Task<object> GetCCMSEmployees();
+    }
+}
+
+
+
+
+
+
+
+
+
+
+using EmployeePortal.API.Entities;
+using System.Threading.Tasks;
+
+namespace EmployeePortal.API.Interfaces
+{
+    public interface IRepository<TEntity> where TEntity : class
+    {
+        Task<object> GetEmployeeByIdent(string employee_ident);
+        Task<object> GetDatabasefortestingdualenvironment(string name);
+    }
+}
+
+
+
+
+
+
