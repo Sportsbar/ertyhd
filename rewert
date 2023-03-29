@@ -1,79 +1,113 @@
-using EmployeePortal.API.Dto;
-using EmployeePortal.API.Interfaces;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
+using System.Data;
+using System.Data.SqlClient;
+using System.Linq;
 using System.Threading.Tasks;
-using static Dapper.SqlMapper;
+using Dapper;
+using Microsoft.AspNetCore.Http;
+using EmployeePortal.API.Middleware;
+using EmployeePortal.API.Dto;
+using System;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using EmployeePortal.API.Interfaces;
 
-[ApiController]
-[Route("api/employees")]
-public class CCMSAPIController : ControllerBase
+namespace EmployeePortal.API.Data
 {
-    ///private readonly IDapperService<ccms_employee> _ccmsemployeeService;
-    private readonly IRepository _ccmsRepository;
-
-    public CCMSAPIController(IRepository ccmsRepository)
+    public class DapperRepository : IRepository
     {
-       // _ccmsemployeeService = ccmsemployeeService;
-        _ccmsRepository = ccmsRepository;
-    }
+        private readonly IConfiguration _configuration;
+        private readonly ILogger<ExceptionMiddleware> _exceptionLogger;
+        private readonly ILogger<LogMiddleware> _logLogger;
+        private readonly IDbConnection _dbConnection;
 
-    [HttpGet("{employee_ident}")]
-    public async Task<ActionResult> GetEmployeeByIdent(int employee_ident)
-    {
-        var result = await _ccmsRepository.GetEmployeeByIdent(employee_ident);
-        if (result == null)
+        public DapperRepository(IConfiguration configuration, ILogger<ExceptionMiddleware> exceptionLogger, ILogger<LogMiddleware> logLogger)
         {
-            return NotFound();
+            _configuration = configuration;
+            _exceptionLogger = exceptionLogger;
+            _logLogger = logLogger;
+            _dbConnection = new SqlConnection(_configuration.GetConnectionString("DefaultConnection"));
         }
-        return Ok(result);
-    }
 
-    [HttpPost("InsertEmployee")]
-    public async Task<ActionResult> InsertEmployee([FromBody] CCMSDto employee)
-    {
-        var id = await _ccmsRepository.InsertEmployee(employee);
-        employee.employee_ident = id;
-        return CreatedAtAction(nameof(GetEmployeeByIdent), new { employee_ident = id }, employee);
-    }
-
-    [HttpPut("UpdateEmployee/{employee_ident}")]
-    public async Task<ActionResult> UpdateEmployee(int employee_ident, [FromBody] CCMSDto employee)
-    {
-        employee.employee_ident = employee_ident;
-        var result = await _ccmsRepository.UpdateEmployee(employee);
-        if (result == null)
+        public async Task<object> GetEmployeeByIdent(int employee_ident)
         {
-            return NotFound();
-        }
-        return Ok(result);
-    }
-
-
-    [HttpDelete("{employeeId}")]
-    public async Task<IActionResult> DeleteEmployee(int employeeId)
-    {
-        try
-        {
-            var result = await _ccmsRepository.DeleteEmployee(employeeId);
-            if (result)
+            try
             {
-                return Ok("Employee deleted successfully.");
+                //Set up DynamicParameters object to pass parameters  
+                DynamicParameters parameters = new DynamicParameters();
+                parameters.Add("@employee_ident", employee_ident);
+                parameters.Add("@action", "get");
+
+                //Execute stored procedure and map the returned result to a Customer object  
+                return _dbConnection.QuerySingleOrDefault<object>("get_employee_by_ident", parameters, commandType: CommandType.StoredProcedure);
             }
-            else
+            catch (Exception ex)
             {
-                return BadRequest("Employee could not be deleted.");
+                throw ex;
             }
         }
-        catch (Exception ex)
+
+        public async Task<int> InsertEmployee(CCMSDto entity)
         {
-            //_exceptionLogger.LogError(ex, ex.Message);
-            return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while deleting employee.");
+            try
+            {
+                //Set up DynamicParameters object to pass parameters  
+                DynamicParameters parameters = new DynamicParameters();
+                parameters.Add("@employee_ident", entity.employee_ident);
+                parameters.Add("@employee_first_name", entity.EmpoyleeFirstName);
+                parameters.Add("@employee_middle_name", entity.EmpoyleeMiddle);
+                parameters.Add("@employee_last_name", entity.EmpoyleeLastName);
+                parameters.Add("@action", "insert");
+
+                //Execute stored procedure and map the returned result to a Customer object  
+                return _dbConnection.QuerySingleOrDefault<int>("get_employee_by_ident", parameters, commandType: CommandType.StoredProcedure);
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
         }
+
+        public async Task<object> UpdateEmployee(CCMSDto entity)
+        {
+            try
+            {
+                //Set up DynamicParameters object to pass parameters  
+                DynamicParameters parameters = new DynamicParameters();
+                parameters.Add("@employee_ident", entity.employee_ident);
+                parameters.Add("@employee_first_name", entity.EmpoyleeFirstName);
+                parameters.Add("@employee_middle_name", entity.EmpoyleeMiddle);
+                parameters.Add("@employee_last_name", entity.EmpoyleeLastName);
+                parameters.Add("@action", "update");
+
+                //Execute stored procedure and map the returned result to a Customer object  
+                return _dbConnection.QuerySingleOrDefault<int>("get_employee_by_ident", parameters, commandType: CommandType.StoredProcedure);
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        public async Task<bool> DeleteEmployee(int employee_ident)
+        {
+            try
+            {
+                // Set up DynamicParameters object to pass parameters  
+                DynamicParameters parameters = new DynamicParameters();
+                parameters.Add("@employee_ident", employee_ident);
+                parameters.Add("@action", "delete");
+
+                // Execute stored procedure and return a bool indicating whether the update was successful  
+                int rowsAffected = await _dbConnection.ExecuteAsync("get_employee_by_ident", parameters, commandType: CommandType.StoredProcedure);
+                return rowsAffected > 0;
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+
     }
-
-
-
-
 }
