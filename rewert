@@ -1,39 +1,44 @@
-//using System;
-//using System.IdentityModel.Tokens.Jwt;
-//using System.Security.Claims;
-//using Microsoft.IdentityModel.Tokens;
 
-//namespace Derty.API.Helpers
-//{
-//    public class JwtTokenGenerator
-//    {
-//        private readonly SymmetricSecurityKey _key;
-//        private readonly string _issuer;
-//        private readonly string _audience;
-//        private readonly int _tokenExpirationInMinutes;
+ALTER PROCEDURE get_employee_by_ident
+  @employee_ident int = NULL,
+  @employee_first_name varchar(50) = NULL,
+  @employee_middle_name varchar(50) = NULL,
+  @employee_last_name varchar(50) = NULL,
+  @action varchar(10)
+AS
+BEGIN
+  IF @action = 'get'
+  BEGIN
+    SELECT *
+    FROM ccms_employee
+    WHERE employee_ident = @employee_ident
+  END
+  ELSE IF @action = 'insert'
+  BEGIN
+    DECLARE @InsertedRows table (employee_ident int)
 
-//        public JwtTokenGenerator(string secretKey, string issuer, string audience, int tokenExpirationInMinutes)
-//        {
-//            _key = new SymmetricSecurityKey(Convert.FromBase64String(secretKey));
-//            _issuer = issuer;
-//            _audience = audience;
-//            _tokenExpirationInMinutes = tokenExpirationInMinutes;
-//        }
+    INSERT INTO ccms_employee (employee_ident, employee_first_name, employee_middle_name, employee_last_name)
+    OUTPUT INSERTED.employee_ident INTO @InsertedRows
+    VALUES (@employee_ident, @employee_first_name, @employee_middle_name, @employee_last_name)
 
-//        public string GenerateJwtToken(ClaimsIdentity identity)
-//        {
-//            var tokenHandler = new JwtSecurityTokenHandler();
-//            var tokenDescriptor = new SecurityTokenDescriptor
-//            {
-//                Subject = identity,
-//                Expires = DateTime.UtcNow.AddMinutes(_tokenExpirationInMinutes),
-//                Issuer = _issuer,
-//                Audience = _audience,
-//                SigningCredentials = new SigningCredentials(_key, SecurityAlgorithms.HmacSha256Signature)
-//            };
-//            var token = tokenHandler.CreateToken(tokenDescriptor);
+    SELECT employee_ident FROM @InsertedRows
+  END
+  ELSE IF @action = 'update'
+  BEGIN
+    DECLARE @UpdatedRows table (employee_ident int)
 
-//            return tokenHandler.WriteToken(token);
-//        }
-//    }
-//}
+    UPDATE ccms_employee
+    SET employee_first_name = COALESCE(@employee_first_name, employee_first_name),
+      employee_middle_name = COALESCE(@employee_middle_name, employee_middle_name),
+      employee_last_name = COALESCE(@employee_last_name, employee_last_name)
+    OUTPUT INSERTED.employee_ident INTO @UpdatedRows
+    WHERE employee_ident = @employee_ident
+
+    SELECT employee_ident FROM @UpdatedRows
+  END
+  ELSE IF @action = 'delete'
+  BEGIN
+    DELETE FROM ccms_employee
+    WHERE employee_ident = @employee_ident
+  END
+END
