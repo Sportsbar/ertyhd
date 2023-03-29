@@ -35,7 +35,7 @@ INSERT INTO ccms_employee (
 
 
 
-alter PROCEDURE get_employee_by_ident
+ALTER PROCEDURE get_employee_by_ident
   @employee_ident int = NULL,
   @employee_first_name varchar(50) = NULL,
   @employee_middle_name varchar(50) = NULL,
@@ -64,7 +64,9 @@ BEGIN
   END
   ELSE IF @action = 'delete'
   BEGIN
-    DELETE FROM ccms_employee
+    UPDATE ccms_employee
+    SET status = 'Terminated'
     WHERE employee_ident = @employee_ident
   END
 END
+
