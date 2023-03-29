@@ -1,24 +1,186 @@
-import { MsalService } from '@azure/msal-angular';
-import { Component, OnInit } from '@angular/core';
+INSERT INTO ccms_employee (
+  hire_date,
+  employee_ident,
+  employee_first_name,
+  employee_middle_name,
+  employee_last_name,
+  employee_common_name,
+  program_ident,
+  program_abbr_name,
+  program_full_name,
+  location_ident,
+  location_abbr_name,
+  location_full_name,
+  application_date,
+  email1,
+  email2,
+  grade,
+  status,
+  desc_grade,
+  sex,
+  desc_sex,
+  maritial_status,
+  dob,
+  desc_status,
+  client_ident,
+  client_abbr_name,
+  client_full_name,
+  manager_ident,
+  manager_first_name,
+  manager_middle_name,
+  manager_last_name,
+  manager_email1,
+  company_ident,
+  company_full_name,
+  company_group_ident,
+  company_group_abbr_name,
+  company_group_full_name,
+  position_code_group_ident,
+  position_code_department_ident,
+  position_code_group_full_name,
+  position_code_department_full_name,
+  timezone,
+  hourly_status,
+  emea_center,
+  BE_insertion_date,
+  last_modify_date,
+  PayType,
+  created,
+  updated,
+  created_ident,
+  updated_ident,
+  vp_ident,
+  vp_common_name,
+  evp_ident,
+  evp_common_name,
+  position_code_tpe_ident,
+  position_code_type_abbr_name,
+  position_code_type_full_name,
+  director_ident,
+  director_common_name,
+  location_type,
+  supervisor_ident,
+  accm_ident,
+  ccm_ident,
+  Has_webcam
+) VALUES (
+  '2023-03-29',
+  3,
+  'John',
+  'Doe',
+  'Smith',
+  'John Smith',
+  1,
+  'PRG',
+  'Program',
+  1,
+  'LOC',
+  'Location',
+  '2023-03-29',
+  'john.smith@company.com',
+  'jsmith@company.com',
+  'A',
+  'Active',
+  'Senior',
+  'Male',
+  'Senior Male',
+  'Single',
+  '1980-01-01',
+  'Active',
+  1,
+  'CLT',
+  'Client',
+  1,
+  'Jane',
+  'D',
+  'Doe',
+  'jane.doe@company.com',
+  1,
+  'Company',
+  1,
+  'CG',
+  'Company Group',
+  1,
+  1,
+  'Position Group',
+  'Position Department',
+  'UTC',
+  'Hourly',
+  0,
+  '2023-03-29',
+  '2023-03-29',
+  'Regular',
+  1,
+  1,
+  1,
+  1,
+  1,
+  'VP',
+  1,
+  'EVP',
+  1,
+  'Position Code Type',
+  'Position Code Type Full Name',
+  1,
+  'Director',
+  'Location Type',
+  1,
+  1,
+  1,
+  'Yes'
+);
 
-@Component({
-  selector: 'app-restricted-page',
-  templateUrl: './restricted-page.component.html',
-  styleUrls: ['./restricted-page.component.css']
-})
-export class RestrictedPageComponent implements OnInit {
 
-  constructor(private authService: MsalService) { }
 
-  getName () : string {
-    if (this.authService.instance.getActiveAccount() == null) {
-      return 'unknown'
-    }
 
-    return this.authService.instance.getActiveAccount().name
-  }
 
-  ngOnInit(): void {
-  }
 
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+alter PROCEDURE get_employee_by_ident
+  @employee_ident int = NULL,
+  @employee_first_name varchar(50) = NULL,
+  @employee_middle_name varchar(50) = NULL,
+  @employee_last_name varchar(50) = NULL,
+  @action varchar(10)
+AS
+BEGIN
+  IF @action = 'get'
+  BEGIN
+    SELECT *
+    FROM ccms_employee
+    WHERE employee_ident = @employee_ident
+  END
+  ELSE IF @action = 'insert'
+  BEGIN
+    INSERT INTO ccms_employee (employee_first_name, employee_middle_name, employee_last_name)
+    VALUES (@employee_first_name, @employee_middle_name, @employee_last_name)
+  END
+  ELSE IF @action = 'update'
+  BEGIN
+    UPDATE ccms_employee
+    SET employee_first_name = COALESCE(@employee_first_name, employee_first_name),
+      employee_middle_name = COALESCE(@employee_middle_name, employee_middle_name),
+      employee_last_name = COALESCE(@employee_last_name, employee_last_name)
+    WHERE employee_ident = @employee_ident
+  END
+  ELSE IF @action = 'delete'
+  BEGIN
+    DELETE FROM ccms_employee
+    WHERE employee_ident = @employee_ident
+  END
+END
