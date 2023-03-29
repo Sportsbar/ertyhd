@@ -1,186 +1,39 @@
-namespace EmployeePortal.API.Dto
-{
-    public class CCMSDto
-    {
-        public int employee_ident { get; set; }
-        public string EmpoyleeFirstName { get; set; }
-       
-        public string EmpoyleeMiddle { get; set; }
-        public string EmpoyleeLastName { get; set; }
-    }
-}
+//using System;
+//using System.IdentityModel.Tokens.Jwt;
+//using System.Security.Claims;
+//using Microsoft.IdentityModel.Tokens;
 
-
-
-
-using EmployeePortal.API.Interfaces;
-using EmployeePortal.API.Data;
-
-namespace EmployeePortal.API.Extensions
-{
-    public static class ServiceCollectionExtensions
-    {
-        public static void AddRepositores(this IServiceCollection services)
-        {
-            services.AddTransient(typeof(IRepository), typeof(DapperRepository));
-           // services.AddTransient<IRepository, DapperRepository>();
-        }
-    }
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-using EmployeePortal.API.Data;
-using EmployeePortal.API.Extensions;
-using EmployeePortal.API.Interfaces;
-using EmployeePortal.API.Middleware;
-using EmployeePortal.API.Services;
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.Tokens;
-using System.Configuration;
-using System.Data;
-using System.Data.SqlClient;
-using System.Text;
-
-var builder = WebApplication.CreateBuilder(args);
-
-//Add JWT token generation
-//builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-//    .AddJwtBearer(options =>
+//namespace EmployeePortal.API.Helpers
+//{
+//    public class JwtTokenGenerator
 //    {
-//        options.TokenValidationParameters = new TokenValidationParameters
+//        private readonly SymmetricSecurityKey _key;
+//        private readonly string _issuer;
+//        private readonly string _audience;
+//        private readonly int _tokenExpirationInMinutes;
+
+//        public JwtTokenGenerator(string secretKey, string issuer, string audience, int tokenExpirationInMinutes)
 //        {
-//            ValidateIssuer = true,
-//            ValidateAudience = true,
-//            ValidateLifetime = true,
-//            ValidateIssuerSigningKey = true,
-//            ValidIssuer = builder.Configuration.GetSection("JwtTokenGenerator")["Issuer"],
-//            ValidAudience = builder.Configuration.GetSection("JwtTokenGenerator")["Audience"],
-//            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration.GetSection("JwtTokenGenerator")["SecretKey"]))
-//        };
-//    });
+//            _key = new SymmetricSecurityKey(Convert.FromBase64String(secretKey));
+//            _issuer = issuer;
+//            _audience = audience;
+//            _tokenExpirationInMinutes = tokenExpirationInMinutes;
+//        }
 
-// Add services to the container.
-builder.Services.AddControllers();
- 
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+//        public string GenerateJwtToken(ClaimsIdentity identity)
+//        {
+//            var tokenHandler = new JwtSecurityTokenHandler();
+//            var tokenDescriptor = new SecurityTokenDescriptor
+//            {
+//                Subject = identity,
+//                Expires = DateTime.UtcNow.AddMinutes(_tokenExpirationInMinutes),
+//                Issuer = _issuer,
+//                Audience = _audience,
+//                SigningCredentials = new SigningCredentials(_key, SecurityAlgorithms.HmacSha256Signature)
+//            };
+//            var token = tokenHandler.CreateToken(tokenDescriptor);
 
-//builder.Services.AddScoped<IDbConnection>(db => new SqlConnection(builder.Configuration.GetConnectionString("DefaultConnection")));
-//builder.Services.AddScoped<IDbConnection>(sp => new SqlConnection(builder.Configuration.GetConnectionString("SecondDbConnectionS")));
-
-// Add services
-builder.Services.AddTransient(typeof(IDapperService<>), typeof(DapperService<>));
-
-// Add repositories
-builder.Services.AddRepositores();
-//builder.Services.AddTransient(typeof(IRepository), typeof(DapperRepository<>));
-//builder.Services.AddTransient<IRepository, DapperRepository>();
-
-// Add CORS policy
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("CorsPolicy", builder =>
-    {
-        builder.AllowAnyOrigin()
-               .AllowAnyMethod()
-               .AllowAnyHeader();
-    });
-});
-
-var app = builder.Build();
-
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
-
-// Add exception handling middleware
-app.UseMiddleware<ExceptionMiddleware>();
-
-// Add logging middleware
-app.UseMiddleware<LogMiddleware>();
-
-app.UseHttpsRedirection();
-
-app.UseAuthentication();
-
-app.UseAuthorization();
-
-app.MapControllers();
-
-// Use CORS policy
-app.UseCors("CorsPolicy");
-
-app.Run();
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-using EmployeePortal.API.Dto;
-using System.Threading.Tasks;
-
-namespace EmployeePortal.API.Interfaces
-{
-    public interface IRepository
-    {
-        Task<object> GetEmployeeByIdent(int employee_ident);
-
-        Task<int> InsertEmployee(CCMSDto entity);
-
-        Task<object>  UpdateEmployee(CCMSDto entity);
-
-       Task<bool> DeleteEmployee(int employeeId);
-        // Task<object> GetDatabasefortestingdualenvironment(string name);
-    }
-}
-
-
-
-
-
-
-
+//            return tokenHandler.WriteToken(token);
+//        }
+//    }
+//}
