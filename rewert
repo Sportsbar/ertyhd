@@ -1,73 +1,79 @@
-INSERT INTO ccms_employee (
-  hire_date,
-  employee_ident,
-  employee_first_name,
-  employee_middle_name,
-  employee_last_name,
-  status
-) VALUES (
-  '2023-03-29',
-  3,
-  'John',
-  'Doe',
-  'Smith',
-  'Active'
-);
+using EmployeePortal.API.Dto;
+using EmployeePortal.API.Interfaces;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using static Dapper.SqlMapper;
+
+[ApiController]
+[Route("api/employees")]
+public class CCMSAPIController : ControllerBase
+{
+    ///private readonly IDapperService<ccms_employee> _ccmsemployeeService;
+    private readonly IRepository _ccmsRepository;
+
+    public CCMSAPIController(IRepository ccmsRepository)
+    {
+       // _ccmsemployeeService = ccmsemployeeService;
+        _ccmsRepository = ccmsRepository;
+    }
+
+    [HttpGet("{employee_ident}")]
+    public async Task<ActionResult> GetEmployeeByIdent(int employee_ident)
+    {
+        var result = await _ccmsRepository.GetEmployeeByIdent(employee_ident);
+        if (result == null)
+        {
+            return NotFound();
+        }
+        return Ok(result);
+    }
+
+    [HttpPost("InsertEmployee")]
+    public async Task<ActionResult> InsertEmployee([FromBody] CCMSDto employee)
+    {
+        var id = await _ccmsRepository.InsertEmployee(employee);
+        employee.employee_ident = id;
+        return CreatedAtAction(nameof(GetEmployeeByIdent), new { employee_ident = id }, employee);
+    }
+
+    [HttpPut("UpdateEmployee/{employee_ident}")]
+    public async Task<ActionResult> UpdateEmployee(int employee_ident, [FromBody] CCMSDto employee)
+    {
+        employee.employee_ident = employee_ident;
+        var result = await _ccmsRepository.UpdateEmployee(employee);
+        if (result == null)
+        {
+            return NotFound();
+        }
+        return Ok(result);
+    }
+
+
+    [HttpDelete("{employeeId}")]
+    public async Task<IActionResult> DeleteEmployee(int employeeId)
+    {
+        try
+        {
+            var result = await _ccmsRepository.DeleteEmployee(employeeId);
+            if (result)
+            {
+                return Ok("Employee deleted successfully.");
+            }
+            else
+            {
+                return BadRequest("Employee could not be deleted.");
+            }
+        }
+        catch (Exception ex)
+        {
+            //_exceptionLogger.LogError(ex, ex.Message);
+            return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while deleting employee.");
+        }
+    }
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-ALTER PROCEDURE get_employee_by_ident
-  @employee_ident int = NULL,
-  @employee_first_name varchar(50) = NULL,
-  @employee_middle_name varchar(50) = NULL,
-  @employee_last_name varchar(50) = NULL,
-  @action varchar(10)
-AS
-BEGIN
-  IF @action = 'get'
-  BEGIN
-    SELECT *
-    FROM ccms_employee
-    WHERE employee_ident = @employee_ident
-  END
-  ELSE IF @action = 'insert'
-  BEGIN
-    INSERT INTO ccms_employee (employee_first_name, employee_middle_name, employee_last_name)
-    VALUES (@employee_first_name, @employee_middle_name, @employee_last_name)
-  END
-  ELSE IF @action = 'update'
-  BEGIN
-    UPDATE ccms_employee
-    SET employee_first_name = COALESCE(@employee_first_name, employee_first_name),
-      employee_middle_name = COALESCE(@employee_middle_name, employee_middle_name),
-      employee_last_name = COALESCE(@employee_last_name, employee_last_name)
-    WHERE employee_ident = @employee_ident
-  END
-  ELSE IF @action = 'delete'
-  BEGIN
-    UPDATE ccms_employee
-    SET status = 'Terminated'
-    WHERE employee_ident = @employee_ident
-  END
-END
-
-
+}
