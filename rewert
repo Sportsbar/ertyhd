@@ -6,3 +6,15 @@ CREATE TABLE emplogtable (
     Exception NVARCHAR(MAX),
     CreatedOn DATETIME NOT NULL
 );
+
+
+
+
+ [HttpPost("InsertEmployee")]
+    public async Task<ActionResult> InsertEmployee([FromBody] CCMSDto employee)
+    {
+        throw new InvalidOperationException("Testing exception handling in middleware.");
+        throw new IOException("Testing IOException handling in middleware.");
+
+       
+    }
