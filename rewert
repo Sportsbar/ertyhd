@@ -1,114 +1,17 @@
-using EmployeePortal.API.Data;
-using EmployeePortal.API.Extensions;
-using EmployeePortal.API.Interfaces;
-using EmployeePortal.API.Middleware;
-using EmployeePortal.API.Services;
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Configuration.AzureKeyVault;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.Tokens;
-using System.Configuration;
-using System.Data;
-using System.Data.SqlClient;
-using System.Text;
-
-
-var builder = WebApplication.CreateBuilder(args);
-
-//Add JWT token generation
-//builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-//    .AddJwtBearer(options =>
-//    {
-//        options.TokenValidationParameters = new TokenValidationParameters
-//        {
-//            ValidateIssuer = true,
-//            ValidateAudience = true,
-//            ValidateLifetime = true,
-//            ValidateIssuerSigningKey = true,
-//            ValidIssuer = builder.Configuration.GetSection("JwtTokenGenerator")["Issuer"],
-//            ValidAudience = builder.Configuration.GetSection("JwtTokenGenerator")["Audience"],
-//            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration.GetSection("JwtTokenGenerator")["SecretKey"]))
-//        };
-//    });
-
-// Add services to the container.
-//builder.Host.ConfigureAppConfiguration((context, config) => {
-//    var settings = config.Build();
-//    var keyVaultURL = settings["KeyVaultConfiguration:KeyVaultURL"];
-//    var keyVaultClientId = settings["KeyVaultConfiguration:ClientId"];
-//    var keyVaultClientSecret = settings["KeyVaultConfiguration:ClientSecret"];
-//    config.AddAzureKeyVault(keyVaultURL, keyVaultClientId, keyVaultClientSecret, new DefaultKeyVaultSecretManager());
-//});
-
-builder.Services.AddControllers();
- 
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
-
-//builder.Services.AddScoped<IDbConnection>(db => new SqlConnection(builder.Configuration.GetConnectionString("DefaultConnection")));
-//builder.Services.AddScoped<IDbConnection>(sp => new SqlConnection(builder.Configuration.GetConnectionString("SecondDbConnectionS")));
-// Add logging middleware
-
-//builder.Services.AddTransient<LogMiddleware>();
-
-
-//builder.Services.AddTransient<LogMiddleware>(new LogMiddleware());
-//builder.Services.AddScoped<ILogMiddleware, LoggingMiddleWriter>();
-
-// Add services
-
-// Add repositories
-builder.Services.AddRepositores();
-//builder.Services.AddTransient(typeof(IRepository), typeof(DapperRepository<>));
-builder.Services.AddTransient<IDapperService, DapperService>();
-
-
-// Add CORS policy
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("CorsPolicy", builder =>
-    {
-        builder.AllowAnyOrigin()
-               .AllowAnyMethod()
-               .AllowAnyHeader();
-    });
-});
-
-var app = builder.Build();
-
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
-// Add exception handling middleware
-app.UseMiddleware<ExceptionMiddleware>();
-
-// Add logging middleware
-app.UseMiddleware<LogMiddleware>();
-
-//app.Use(async (context, next) =>
-//{
-//    await context.Response.WriteAsync("Getting Response from 1st Middleware");
-//    await next();
-//});
-
-app.UseHttpsRedirection();
-
-app.UseAuthentication();
-
-app.UseAuthorization();
-
-app.MapControllers();
-
-// Use CORS policy
-app.UseCors("CorsPolicy");
-
-app.Run();
-
+app.UseExceptionHandler(  
+                options =>  
+                {  
+                    options.Run(  
+                        async context =>  
+                        {  
+                            context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;  
+                            context.Response.ContentType = "text/html";  
+                            var exceptionObject = context.Features.Get<IExceptionHandlerFeature>();  
+                            if (null != exceptionObject)  
+                            {  
+                                var errorMessage = $"<b>Exception Error: {exceptionObject.Error.Message} </b> {exceptionObject.Error.StackTrace}";  
+                                await context.Response.WriteAsync(errorMessage).ConfigureAwait(false);  
+                            }  
+                        });  
+                }  
+            );  
