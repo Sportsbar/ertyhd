@@ -1,17 +1,176 @@
-app.UseExceptionHandler(  
-                options =>  
-                {  
-                    options.Run(  
-                        async context =>  
-                        {  
-                            context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;  
-                            context.Response.ContentType = "text/html";  
-                            var exceptionObject = context.Features.Get<IExceptionHandlerFeature>();  
-                            if (null != exceptionObject)  
-                            {  
-                                var errorMessage = $"<b>Exception Error: {exceptionObject.Error.Message} </b> {exceptionObject.Error.StackTrace}";  
-                                await context.Response.WriteAsync(errorMessage).ConfigureAwait(false);  
-                            }  
-                        });  
-                }  
-            );  
+using System;
+using System.Data;
+using System.Data.SqlClient;
+using System.Diagnostics;
+using System.IO;
+using System.Text;
+using System.Threading.Tasks;
+using Dapper;
+using EmployeePortal.API.Interfaces;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
+
+namespace EmployeePortal.API.Middleware
+{
+    public class LogMiddleware
+    {
+        private readonly RequestDelegate _next;
+        private readonly IDapperService _ccmsemployeeService;
+
+        public LogMiddleware(RequestDelegate next, IDapperService ccmsemployeeService)
+        {
+            _next = next;
+            _ccmsemployeeService = ccmsemployeeService;
+        }
+
+        public async Task Invoke(HttpContext context)
+        {
+            var watch = Stopwatch.StartNew();
+
+            try
+            {
+                await _next(context);
+
+                watch.Stop();
+
+                var message = $"{context.Request.Method} {context.Request.Path} - {context.Response.StatusCode} ({watch.ElapsedMilliseconds} ms)";
+               // await _ccmsemployeeService.LogToDatabase("Info", "API", message, null);
+            }
+            catch (HttpRequestException ex)
+            {
+                watch.Stop();
+
+                var message = $"{context.Request.Method} {context.Request.Path} - {ex.GetType().Name} ({watch.ElapsedMilliseconds} ms)";
+                await _ccmsemployeeService.LogToDatabase("Error", "API", message, ex.ToString());
+
+                context.Response.StatusCode = 500;
+                context.Response.ContentType = "text/plain";
+                await context.Response.WriteAsync("An error occurred while processing your request.");
+
+                throw;
+            }
+            catch (Exception ex)
+            {
+                watch.Stop();
+
+                var message = $"{context.Request.Method} {context.Request.Path} - {ex.GetType().Name} ({watch.ElapsedMilliseconds} ms)";
+                await _ccmsemployeeService.LogToDatabase("Error", "API", message, ex.ToString());
+
+                throw;
+            }
+        }
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+using System;
+using System.Net;
+using System.Threading.Tasks;
+using EmployeePortal.API.Interfaces;
+using Microsoft.AspNetCore.Http;
+//using Newtonsoft.Json;
+using System.Text.Json;
+using System.Data.SqlClient;
+
+
+namespace EmployeePortal.API.Middleware
+{
+    public class ExceptionMiddleware 
+    {
+        
+            private readonly RequestDelegate _next;
+            private readonly IDapperService _ccmsemployeeService;
+
+            public ExceptionMiddleware(RequestDelegate next, IDapperService ccmsemployeeService)
+            {
+                _next = next;
+                _ccmsemployeeService = ccmsemployeeService;
+            }
+
+
+        public async Task Invoke(HttpContext context)
+        {
+            try
+            {
+                await _next(context);
+            }
+            catch (SqlException ex)
+            {
+                await HandleExceptions(context, ex, _ccmsemployeeService);
+            }
+            catch (InvalidOperationException ex)
+            {
+                await HandleExceptions(context, ex, _ccmsemployeeService);
+            }
+            catch (Exception ex)
+            {
+                await HandleExceptions(context, ex, _ccmsemployeeService);
+            }
+            
+            //finally
+            //{
+            //    // any cleanup code
+            //}
+        }
+
+
+        private static async Task HandleExceptions(HttpContext context, Exception ex, IDapperService ccmsemployeeService)
+        {
+            var statusCode = HttpStatusCode.InternalServerError;
+            var message = "An error occurred while processing your request.";
+
+            if (ex is SqlException || ex is InvalidOperationException)
+            {
+                statusCode = HttpStatusCode.InternalServerError;
+                message = "An error occurred while inserting an employee: " + ex.Message;
+                await ccmsemployeeService.LogToDatabase("Error", "CCMSController.InsertEmployee", message, ex.StackTrace);
+            }
+
+            var result = JsonSerializer.Serialize(new { error = message });
+            context.Response.ContentType = "application/json";
+            context.Response.StatusCode = (int)statusCode;
+            await context.Response.WriteAsync(result);
+        }
+
+    }
+
+
+}
+
