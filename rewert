@@ -1,20 +1,17 @@
-CREATE TABLE emplogtable (
-    Id INT PRIMARY KEY IDENTITY(1,1),
-    LogLevel NVARCHAR(50) NOT NULL,
-    Source NVARCHAR(50) NOT NULL,
-    Message NVARCHAR(MAX) NOT NULL,
-    Exception NVARCHAR(MAX),
-    CreatedOn DATETIME NOT NULL
-);
-
-
-
-
- [HttpPost("InsertEmployee")]
-    public async Task<ActionResult> InsertEmployee([FromBody] CCMSDto employee)
-    {
-        throw new InvalidOperationException("Testing exception handling in middleware.");
-        throw new IOException("Testing IOException handling in middleware.");
-
-       
-    }
+app.UseExceptionHandler(  
+                options =>  
+                {  
+                    options.Run(  
+                        async context =>  
+                        {  
+                            context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;  
+                            context.Response.ContentType = "text/html";  
+                            var exceptionObject = context.Features.Get<IExceptionHandlerFeature>();  
+                            if (null != exceptionObject)  
+                            {  
+                                var errorMessage = $"<b>Exception Error: {exceptionObject.Error.Message} </b> {exceptionObject.Error.StackTrace}";  
+                                await context.Response.WriteAsync(errorMessage).ConfigureAwait(false);  
+                            }  
+                        });  
+                }  
+            );  
