@@ -1,17 +1,173 @@
-app.UseExceptionHandler(  
-                options =>  
-                {  
-                    options.Run(  
-                        async context =>  
-                        {  
-                            context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;  
-                            context.Response.ContentType = "text/html";  
-                            var exceptionObject = context.Features.Get<IExceptionHandlerFeature>();  
-                            if (null != exceptionObject)  
-                            {  
-                                var errorMessage = $"<b>Exception Error: {exceptionObject.Error.Message} </b> {exceptionObject.Error.StackTrace}";  
-                                await context.Response.WriteAsync(errorMessage).ConfigureAwait(false);  
-                            }  
-                        });  
-                }  
-            );  
+using System;
+using System.Data;
+using System.Data.Common;
+using System.Data.SqlClient;
+using System.Linq;
+using System.Threading.Tasks;
+using Dapper;
+using EmployeePortal.API.Interfaces;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
+using EmployeePortal.API.Entities;
+
+namespace EmployeePortal.API.Services
+{
+    public class DapperService : IDapperService
+    {
+        private readonly IConfiguration _configuration;
+        private readonly ILogger<DapperService> _logger;
+
+        public DapperService(IConfiguration configuration, ILogger<DapperService> logger)
+        {
+            _configuration = configuration;
+            _logger = logger;
+        }
+
+        public async Task<object> GetCCMSEmployees()
+        {
+            try
+            {
+                using var connections = new SqlConnection(_configuration.GetConnectionString("DefaultConnection"));
+                var result = await connections.QueryAsync("Getccmsemployees", commandType: CommandType.StoredProcedure);
+
+                return result.Cast<object>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while executing the stored procedure.");
+                throw;
+            }
+        }
+
+        public async Task LogToDatabase(string level, string source, string message, string exception)
+        {
+            try
+            {
+                var sql = "INSERT INTO emplogtable (LogLevel, Source, Message, Exception, CreatedOn) " +
+                           "VALUES (@LogLevel, @Source, @Message, @Exception, @CreatedOn)";
+
+                using (SqlConnection connection = new SqlConnection(_configuration["ConnectionStrings:DefaultConnection"]))
+                {
+                    await connection.OpenAsync();
+
+                    using (SqlCommand command = new SqlCommand(sql, connection))
+                    {
+                        command.Parameters.AddWithValue("@LogLevel", level);
+                        command.Parameters.AddWithValue("@Source", source);
+                        command.Parameters.AddWithValue("@Message", message);
+                        command.Parameters.AddWithValue("@Exception", exception);
+                        command.Parameters.AddWithValue("@CreatedOn", DateTime.UtcNow);
+
+                        await command.ExecuteNonQueryAsync();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                //_exceptionLogger.LogError(ex, "An error occurred while logging to the database");
+
+            }
+        }
+
+
+
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+ public Task LogToDatabase(string level, string source, string message, string exception);
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ using System;
+using System.Net;
+using System.Threading.Tasks;
+using EmployeePortal.API.Interfaces;
+using Microsoft.AspNetCore.Http;
+using Newtonsoft.Json;
+using System.Data.SqlClient;
+
+
+namespace EmployeePortal.API.Middleware
+{
+    public class ExceptionMiddleware 
+    {
+        
+            private readonly RequestDelegate _next;
+            private readonly IDapperService _ccmsemployeeService;
+
+            public ExceptionMiddleware(RequestDelegate next, IDapperService ccmsemployeeService)
+            {
+                _next = next;
+                _ccmsemployeeService = ccmsemployeeService;
+            }
+
+            // ...
+        
+
+        public async Task Invoke(HttpContext context)
+        {
+            try
+            {
+                await _next(context);
+            }
+            catch (Exception ex)
+            {
+                await HandleExceptions(context, ex, _ccmsemployeeService);
+            }
+        }
+
+        private static async Task HandleExceptions(HttpContext context, Exception ex, IDapperService ccmsemployeeService)
+        {
+            var statusCode = HttpStatusCode.InternalServerError;
+            var message = "An error occurred while processing your request.";
+
+            if (ex is SqlException || ex is InvalidOperationException)
+            {
+                statusCode = HttpStatusCode.InternalServerError;
+                message = "An error occurred while inserting an employee: " + ex.Message;
+                await ccmsemployeeService.LogToDatabase("Error", "CCMSController.InsertEmployee", message, ex.StackTrace);
+            }
+
+            var result = JsonConvert.SerializeObject(new { error = message });
+            context.Response.ContentType = "application/json";
+            context.Response.StatusCode = (int)statusCode;
+            await context.Response.WriteAsync(result);
+        }
+    }
+
+
+}
+
