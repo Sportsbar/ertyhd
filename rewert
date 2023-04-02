@@ -1,255 +1,134 @@
-using EmployeePortal.API.Interfaces;
 using EmployeePortal.API.Data;
-using EmployeePortal.API.Middleware;
-
-namespace EmployeePortal.API.Extensions
-{
-    public static class ServiceCollectionExtensions
-    {
-        public static void AddRepositores(this IServiceCollection services)
-        {
-            services.AddTransient(typeof(IRepository), typeof(DapperRepository));
-             services.AddTransient<IRepository, DapperRepository>();
-        }
-    }
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-using EmployeePortal.API.Dto;
-using System.Threading.Tasks;
-
-namespace EmployeePortal.API.Interfaces
-{
-    public interface IRepository
-    {
-        Task<object> GetEmployeeByIdent(int employee_ident);
-
-    }
-}
-
-
-
-
-
-
-
-
-
-
-
-
-using System.Net;
-
-namespace EmployeePortal.API.Middleware
-{
-    public class ApiException : Exception
-    {
-        private int _httpStatusCode = (int)HttpStatusCode.InternalServerError;
-        public ApiException() { }
-        public ApiException(string message) : base(message) { }
-
-        public int httpStatusCode
-        {
-            get { return _httpStatusCode; }
-        }
-    }
-
-    public class NotFoundApiException : ApiException
-    {
-        // private int _httpStatusCode = (int)HttpStatusCode.BadRequest;
-        public NotFoundApiException() { }
-        public NotFoundApiException(string message) : base(message) { }
-    }
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-using System;
-using System.Net;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Data.SqlClient;
-//using NLog.Web;
-using Microsoft.AspNetCore.Mvc;
 using EmployeePortal.API.Extensions;
-using System.Text.Json;
-using NLog.Web;
+using EmployeePortal.API.Interfaces;
+using EmployeePortal.API.Middleware;
+using EmployeePortal.API.Services;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration.AzureKeyVault;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
 using NLog;
-
-namespace EmployeePortal.API.Middleware
-{
-    public class ExceptionMiddleware
-    {
-        private readonly RequestDelegate _next;
-
-        public ExceptionMiddleware(RequestDelegate next)
-        {
-            this._next = next;
-        }
-
-        public async Task Invoke(HttpContext context)
-        {
-            try
-            {
-                await this._next(context);
-            }
-           catch(ApiException ex)
-            {
-                await HandleExceptions(context, ex);
-            }
-            catch (Exception ex)
-            {
-                 await HandleExceptions(context, ex);
-            }
-        }
-
-        private static async Task HandleExceptions(HttpContext context, Exception ex)
-        {
-            var statusCode = HttpStatusCode.InternalServerError;
-            var message = "An error occurred while processing your request.";
-
-            if (ex is SqlException || ex is InvalidOperationException)
-            {
-                statusCode = HttpStatusCode.InternalServerError;
-                message = "An error occurred while inserting an employee: " + ex.Message;
-            }
-
-            //var logger = NLogBuilder.ConfigureNLog("NLog.config").GetCurrentClassLogger();
-            var logger = NLog.LogManager.Setup().LoadConfigurationFromAppSettings().GetCurrentClassLogger();
-            //var logger = NLogBuilder.ConfigureNLog("nlog.config").GetCurrentClassLogger();
-            logger.Error(ex, message);
-
-            var result = JsonSerializer.Serialize(new { error = message });
-            context.Response.ContentType = "application/json";
-            context.Response.StatusCode = (int)statusCode;
-            await context.Response.WriteAsync(result);
-        }
-
-
-
-    }
-
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+using NLog.Extensions.Logging;
+using NLog.Web;
 using System;
+using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
-using System.Diagnostics;
-using System.IO;
 using System.Text;
-using System.Threading.Tasks;
-using Dapper;
-using EmployeePortal.API.Interfaces;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Configuration;
-using NLog;
+using static System.Net.Mime.MediaTypeNames;
+//var logger =NLog.LogManager.Setup().LoadConfigurationFromAppSettings().GetCurrentClassLogger();
+//logger.Debug("init start main");
+var logger = NLog.LogManager.Setup().LoadConfigurationFromAppSettings().GetCurrentClassLogger();
+//var logger = NLogBuilder.ConfigureNLog("nlog.config").GetCurrentClassLogger();
+//var logger = NLogBuilder.ConfigureNLog("nlog.config").GetCurrentClassLogger();
+logger.Debug("init main");
+try 
+{ 
+var builder = WebApplication.CreateBuilder(args);
 
-namespace EmployeePortal.API.Middleware
+//Add JWT token generation
+//builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+//    .AddJwtBearer(options =>
+//    {
+//        options.TokenValidationParameters = new TokenValidationParameters
+//        {
+//            ValidateIssuer = true,
+//            ValidateAudience = true,
+//            ValidateLifetime = true,
+//            ValidateIssuerSigningKey = true,
+//            ValidIssuer = builder.Configuration.GetSection("JwtTokenGenerator")["Issuer"],
+//            ValidAudience = builder.Configuration.GetSection("JwtTokenGenerator")["Audience"],
+//            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration.GetSection("JwtTokenGenerator")["SecretKey"]))
+//        };
+//    });
+
+// Add services to the container.
+//builder.Host.ConfigureAppConfiguration((context, config) =>
+//{
+//    var settings = config.Build();
+//    var keyVaultURL = settings["KeyVaultConfiguration:KeyVaultURL"];
+//    var keyVaultClientId = settings["KeyVaultConfiguration:ClientId"];
+//    var keyVaultClientSecret = settings["KeyVaultConfiguration:ClientSecret"];
+//    config.AddAzureKeyVault(keyVaultURL, keyVaultClientId, keyVaultClientSecret, new DefaultKeyVaultSecretManager());
+//});
+
+builder.Services.AddControllers();
+//builder.Services.AddControllersWithViews();
+
+// NLog: Setup NLog for Dependency injection
+builder.Logging.ClearProviders();
+builder.Logging.SetMinimumLevel(Microsoft.Extensions.Logging.LogLevel.Trace);
+builder.Host.UseNLog();
+
+// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
+// Add repositories
+builder.Services.AddRepositores();
+builder.Services.AddTransient<IDapperService, DapperService>();
+
+// Configure logging
+builder.Logging.ClearProviders();
+builder.Services.AddLogging(loggingBuilder =>
 {
-    public class LogMiddleware
+    loggingBuilder.ClearProviders();
+    loggingBuilder.AddNLog(new NLogProviderOptions
     {
-        private readonly RequestDelegate _next;
-        private readonly NLog.ILogger _logger;
+        CaptureMessageTemplates = true,
+        CaptureMessageProperties = true
+    });
+});
+//builder.Host.UseNLog();
 
-        public LogMiddleware(RequestDelegate next)
-        {
-            _next = next;
-            _logger = LogManager.GetCurrentClassLogger();
-        }
+// Add CORS policy
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("CorsPolicy", builder =>
+    {
+        builder.AllowAnyOrigin()
+               .AllowAnyMethod()
+               .AllowAnyHeader();
+    });
+});
+builder.Services.Configure<ApiBehaviorOptions>(options =>
+{
+    options.SuppressModelStateInvalidFilter = true;
+});
+var app = builder.Build();
 
-
-        public async Task Invoke(HttpContext context)
-        {
-            var watch = Stopwatch.StartNew();
-
-            try
-            {
-                await _next(context);
-
-                watch.Stop();
-
-                var message = $"{context.Request.Method} {context.Request.Path} - {context.Response.StatusCode} ({watch.ElapsedMilliseconds} ms)";
-                _logger.Info(message);
-            }
-           
-            catch (Exception ex)
-            {
-                watch.Stop();
-
-                var message = $"{context.Request.Method} {context.Request.Path} - {ex.GetType().Name} ({watch.ElapsedMilliseconds} ms)";
-                _logger.Error(ex, message);
-
-                throw;
-            }
-        }
-    }
+// Add logging middleware
+//app.UseMiddleware<LogMiddleware>();
+// Configure the HTTP request pipeline.
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+//configure exception middleware
+app.UseMiddleware<ExceptionMiddleware>();
+app.UseHttpsRedirection();
+app.UseAuthorization();
+app.MapControllers();
+app.Run();
+}
+catch (Exception exception)
+{
+    // NLog: catch setup errors
+    logger.Error(exception, "Stopped program because of exception");
+    throw;
+}
+finally
+{
+    // Ensure to flush and stop internal timers/threads before application-exit (Avoid segmentation fault on Linux)
+    NLog.LogManager.Shutdown();
+}
