@@ -1,69 +1,255 @@
-using System;
-using System.Collections.Generic;
-using System.Data;
-using System.Data.SqlClient;
-using System.Linq;
+using EmployeePortal.API.Interfaces;
+using EmployeePortal.API.Data;
+using EmployeePortal.API.Middleware;
+
+namespace EmployeePortal.API.Extensions
+{
+    public static class ServiceCollectionExtensions
+    {
+        public static void AddRepositores(this IServiceCollection services)
+        {
+            services.AddTransient(typeof(IRepository), typeof(DapperRepository));
+             services.AddTransient<IRepository, DapperRepository>();
+        }
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+using EmployeePortal.API.Dto;
 using System.Threading.Tasks;
-using Dapper;
+
+namespace EmployeePortal.API.Interfaces
+{
+    public interface IRepository
+    {
+        Task<object> GetEmployeeByIdent(int employee_ident);
+
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+using System.Net;
+
+namespace EmployeePortal.API.Middleware
+{
+    public class ApiException : Exception
+    {
+        private int _httpStatusCode = (int)HttpStatusCode.InternalServerError;
+        public ApiException() { }
+        public ApiException(string message) : base(message) { }
+
+        public int httpStatusCode
+        {
+            get { return _httpStatusCode; }
+        }
+    }
+
+    public class NotFoundApiException : ApiException
+    {
+        // private int _httpStatusCode = (int)HttpStatusCode.BadRequest;
+        public NotFoundApiException() { }
+        public NotFoundApiException(string message) : base(message) { }
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+using System;
+using System.Net;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Data.SqlClient;
-using EmployeePortal.API.Middleware;
-using EmployeePortal.API.Dto;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
-using EmployeePortal.API.Interfaces;
-using EmployeePortal.API.Entities;
+//using NLog.Web;
+using Microsoft.AspNetCore.Mvc;
+using EmployeePortal.API.Extensions;
+using System.Text.Json;
+using NLog.Web;
+using NLog;
 
-namespace EmployeePortal.API.Data
+namespace EmployeePortal.API.Middleware
 {
-    public class DapperRepository : IRepository
+    public class ExceptionMiddleware
     {
-        private readonly IConfiguration _configuration;
-        private readonly ILogger<ExceptionMiddleware> _exceptionLogger;
-        //private readonly LoggingMiddleWriter _logLogger;
-        private readonly IDbConnection _dbConnection;
-       // private readonly ILogMiddleware _logMiddleware;
-        private readonly IDapperService _savelogs;
+        private readonly RequestDelegate _next;
 
-        public DapperRepository(IConfiguration configuration, ILogger<ExceptionMiddleware> exceptionLogger, IDapperService savelogs)
+        public ExceptionMiddleware(RequestDelegate next)
         {
-            _configuration = configuration;
-            _exceptionLogger = exceptionLogger;
-           // _logMiddleware = logMiddleware;
-            _dbConnection = new SqlConnection(_configuration.GetConnectionString("DefaultConnection"));
-            _savelogs = savelogs;
-            //_logLogger = logLogger;
+            this._next = next;
         }
 
-        public async Task<object> GetEmployeeByIdent(int employee_ident)
+        public async Task Invoke(HttpContext context)
         {
             try
             {
-                //Set up DynamicParameters object to pass parameters  
-                DynamicParameters parameters = new DynamicParameters();
-                parameters.Add("@employee_ident", employee_ident);
-               
-
-                //Execute stored procedure and map the returned result to a Customer object  
-                object m= await _dbConnection.QuerySingleOrDefaultAsync<object>("get_employee_by_ident", parameters, commandType: CommandType.StoredProcedure);
-                if (m == null)
-                {
-                    return "record not found";
-                }
-                return await _dbConnection.QuerySingleOrDefaultAsync<object>("get_employee_by_ident", parameters, commandType: CommandType.StoredProcedure);
+                await this._next(context);
+            }
+           catch(ApiException ex)
+            {
+                await HandleExceptions(context, ex);
             }
             catch (Exception ex)
             {
-               // var message = "An error occurred while retrieving an employee by ID";
-                //  _logLogger.LogError(ex, message);
+                 await HandleExceptions(context, ex);
+            }
+        }
 
-             //  await _savelogs.LogToDatabase("Error", "DapperRepository.GetEmployeeByIdent", message, ex.Message);
+        private static async Task HandleExceptions(HttpContext context, Exception ex)
+        {
+            var statusCode = HttpStatusCode.InternalServerError;
+            var message = "An error occurred while processing your request.";
+
+            if (ex is SqlException || ex is InvalidOperationException)
+            {
+                statusCode = HttpStatusCode.InternalServerError;
+                message = "An error occurred while inserting an employee: " + ex.Message;
+            }
+
+            //var logger = NLogBuilder.ConfigureNLog("NLog.config").GetCurrentClassLogger();
+            var logger = NLog.LogManager.Setup().LoadConfigurationFromAppSettings().GetCurrentClassLogger();
+            //var logger = NLogBuilder.ConfigureNLog("nlog.config").GetCurrentClassLogger();
+            logger.Error(ex, message);
+
+            var result = JsonSerializer.Serialize(new { error = message });
+            context.Response.ContentType = "application/json";
+            context.Response.StatusCode = (int)statusCode;
+            await context.Response.WriteAsync(result);
+        }
+
+
+
+    }
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+using System;
+using System.Data;
+using System.Data.SqlClient;
+using System.Diagnostics;
+using System.IO;
+using System.Text;
+using System.Threading.Tasks;
+using Dapper;
+using EmployeePortal.API.Interfaces;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
+using NLog;
+
+namespace EmployeePortal.API.Middleware
+{
+    public class LogMiddleware
+    {
+        private readonly RequestDelegate _next;
+        private readonly NLog.ILogger _logger;
+
+        public LogMiddleware(RequestDelegate next)
+        {
+            _next = next;
+            _logger = LogManager.GetCurrentClassLogger();
+        }
+
+
+        public async Task Invoke(HttpContext context)
+        {
+            var watch = Stopwatch.StartNew();
+
+            try
+            {
+                await _next(context);
+
+                watch.Stop();
+
+                var message = $"{context.Request.Method} {context.Request.Path} - {context.Response.StatusCode} ({watch.ElapsedMilliseconds} ms)";
+                _logger.Info(message);
+            }
+           
+            catch (Exception ex)
+            {
+                watch.Stop();
+
+                var message = $"{context.Request.Method} {context.Request.Path} - {ex.GetType().Name} ({watch.ElapsedMilliseconds} ms)";
+                _logger.Error(ex, message);
 
                 throw;
             }
         }
-
-       
-
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
