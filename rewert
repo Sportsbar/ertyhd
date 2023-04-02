@@ -1,45 +1,69 @@
-using EmployeePortal.API.Dto;
-using EmployeePortal.API.Interfaces;
-using EmployeePortal.API.Middleware;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
-using static Dapper.SqlMapper;
+using System.Data;
 using System.Data.SqlClient;
+using System.Linq;
+using System.Threading.Tasks;
+using Dapper;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Data.SqlClient;
+using EmployeePortal.API.Middleware;
+using EmployeePortal.API.Dto;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using EmployeePortal.API.Interfaces;
+using EmployeePortal.API.Entities;
 
-
-[ApiController]
-[Route("api/employees")]
-public class CCMSAPIController : ControllerBase
+namespace EmployeePortal.API.Data
 {
-   
-    private readonly IRepository _ccmsRepository;
-  
-    //private readonly ILogMiddleware _logMiddleware; 
-    public CCMSAPIController(IRepository ccmsRepository)
+    public class DapperRepository : IRepository
     {
-       
-        _ccmsRepository = ccmsRepository;
-      
-          // _logMiddleware = logMiddleware;
-    }
+        private readonly IConfiguration _configuration;
+        private readonly ILogger<ExceptionMiddleware> _exceptionLogger;
+        //private readonly LoggingMiddleWriter _logLogger;
+        private readonly IDbConnection _dbConnection;
+       // private readonly ILogMiddleware _logMiddleware;
+        private readonly IDapperService _savelogs;
 
-    [HttpGet("{employee_ident}")]
-    public async Task<ActionResult> GetEmployeeByIdent(int employee_ident)
-    {
-        try
+        public DapperRepository(IConfiguration configuration, ILogger<ExceptionMiddleware> exceptionLogger, IDapperService savelogs)
         {
-            var result = await _ccmsRepository.GetEmployeeByIdent(employee_ident);
-            if (result == null)
-            {
-                return NotFound("Record Not found");
-            }
-            return Ok(result);
+            _configuration = configuration;
+            _exceptionLogger = exceptionLogger;
+           // _logMiddleware = logMiddleware;
+            _dbConnection = new SqlConnection(_configuration.GetConnectionString("DefaultConnection"));
+            _savelogs = savelogs;
+            //_logLogger = logLogger;
         }
-        catch (Exception ex) { throw; }    
+
+        public async Task<object> GetEmployeeByIdent(int employee_ident)
+        {
+            try
+            {
+                //Set up DynamicParameters object to pass parameters  
+                DynamicParameters parameters = new DynamicParameters();
+                parameters.Add("@employee_ident", employee_ident);
+               
+
+                //Execute stored procedure and map the returned result to a Customer object  
+                object m= await _dbConnection.QuerySingleOrDefaultAsync<object>("get_employee_by_ident", parameters, commandType: CommandType.StoredProcedure);
+                if (m == null)
+                {
+                    return "record not found";
+                }
+                return await _dbConnection.QuerySingleOrDefaultAsync<object>("get_employee_by_ident", parameters, commandType: CommandType.StoredProcedure);
+            }
+            catch (Exception ex)
+            {
+               // var message = "An error occurred while retrieving an employee by ID";
+                //  _logLogger.LogError(ex, message);
+
+             //  await _savelogs.LogToDatabase("Error", "DapperRepository.GetEmployeeByIdent", message, ex.Message);
+
+                throw;
+            }
+        }
+
+       
+
     }
-
-
 }
