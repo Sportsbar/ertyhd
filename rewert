@@ -1,134 +1,28 @@
-using EmployeePortal.API.Data;
-using EmployeePortal.API.Extensions;
-using EmployeePortal.API.Interfaces;
-using EmployeePortal.API.Middleware;
-using EmployeePortal.API.Services;
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Diagnostics;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Configuration.AzureKeyVault;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.Tokens;
-using NLog;
-using NLog.Extensions.Logging;
-using NLog.Web;
-using System;
-using System.Configuration;
-using System.Data;
-using System.Data.SqlClient;
-using System.Text;
-using static System.Net.Mime.MediaTypeNames;
-//var logger =NLog.LogManager.Setup().LoadConfigurationFromAppSettings().GetCurrentClassLogger();
-//logger.Debug("init start main");
-var logger = NLog.LogManager.Setup().LoadConfigurationFromAppSettings().GetCurrentClassLogger();
-//var logger = NLogBuilder.ConfigureNLog("nlog.config").GetCurrentClassLogger();
-//var logger = NLogBuilder.ConfigureNLog("nlog.config").GetCurrentClassLogger();
-logger.Debug("init main");
-try 
-{ 
-var builder = WebApplication.CreateBuilder(args);
+<?xml version="1.0" encoding="utf-8" ?>
+<nlog xmlns="http://www.nlog-project.org/schemas/NLog.xsd"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      autoReload="true"
+      internalLogLevel="Trace"
+      internalLogFile="internalLog.txt">
 
-//Add JWT token generation
-//builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-//    .AddJwtBearer(options =>
-//    {
-//        options.TokenValidationParameters = new TokenValidationParameters
-//        {
-//            ValidateIssuer = true,
-//            ValidateAudience = true,
-//            ValidateLifetime = true,
-//            ValidateIssuerSigningKey = true,
-//            ValidIssuer = builder.Configuration.GetSection("JwtTokenGenerator")["Issuer"],
-//            ValidAudience = builder.Configuration.GetSection("JwtTokenGenerator")["Audience"],
-//            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration.GetSection("JwtTokenGenerator")["SecretKey"]))
-//        };
-//    });
+	<targets>
+		<target xsi:type="Database"
+      name="dbTarget"
+      connectionString="Data Source=DONTPANIC\MSSQLSERVER02;Initial Catalog=CCMS;Integrated Security=True;Encrypt=False;TrustServerCertificate=True;User Instance=False;"
+      commandText="INSERT INTO ep_errorlog(CreatedOn,MachineName,Message,Level,Exception,StackTrace,Logger) VALUES (@datetime,@machineName,@msg,@level,@exception,@trace,@logger)">
+			<parameter name="@datetime" layout="${date}" />
+			<parameter name="@machineName" layout="${machinename}" />
+			<parameter name="@msg" layout="${message}" />
+			<parameter name="@level" layout="${level}" />
+			<parameter name="@exception" layout="${exception}" />
+			<parameter name="@trace" layout="${stacktrace}" />
+			<parameter name="@logger" layout="${logger}" />
 
-// Add services to the container.
-//builder.Host.ConfigureAppConfiguration((context, config) =>
-//{
-//    var settings = config.Build();
-//    var keyVaultURL = settings["KeyVaultConfiguration:KeyVaultURL"];
-//    var keyVaultClientId = settings["KeyVaultConfiguration:ClientId"];
-//    var keyVaultClientSecret = settings["KeyVaultConfiguration:ClientSecret"];
-//    config.AddAzureKeyVault(keyVaultURL, keyVaultClientId, keyVaultClientSecret, new DefaultKeyVaultSecretManager());
-//});
+		</target>
+	</targets>
 
-builder.Services.AddControllers();
-//builder.Services.AddControllersWithViews();
-
-// NLog: Setup NLog for Dependency injection
-builder.Logging.ClearProviders();
-builder.Logging.SetMinimumLevel(Microsoft.Extensions.Logging.LogLevel.Trace);
-builder.Host.UseNLog();
-
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
-
-// Add repositories
-builder.Services.AddRepositores();
-builder.Services.AddTransient<IDapperService, DapperService>();
-
-// Configure logging
-builder.Logging.ClearProviders();
-builder.Services.AddLogging(loggingBuilder =>
-{
-    loggingBuilder.ClearProviders();
-    loggingBuilder.AddNLog(new NLogProviderOptions
-    {
-        CaptureMessageTemplates = true,
-        CaptureMessageProperties = true
-    });
-});
-//builder.Host.UseNLog();
-
-// Add CORS policy
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("CorsPolicy", builder =>
-    {
-        builder.AllowAnyOrigin()
-               .AllowAnyMethod()
-               .AllowAnyHeader();
-    });
-});
-builder.Services.Configure<ApiBehaviorOptions>(options =>
-{
-    options.SuppressModelStateInvalidFilter = true;
-});
-var app = builder.Build();
-
-// Add logging middleware
-//app.UseMiddleware<LogMiddleware>();
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
-
-
-//configure exception middleware
-app.UseMiddleware<ExceptionMiddleware>();
-app.UseHttpsRedirection();
-app.UseAuthorization();
-app.MapControllers();
-app.Run();
-}
-catch (Exception exception)
-{
-    // NLog: catch setup errors
-    logger.Error(exception, "Stopped program because of exception");
-    throw;
-}
-finally
-{
-    // Ensure to flush and stop internal timers/threads before application-exit (Avoid segmentation fault on Linux)
-    NLog.LogManager.Shutdown();
-}
+	<rules>
+		<logger name="*" minlevel="Error" writeTo="dbTarget" />
+		<logger name="*" minlevel="Info" writeTo="dbTarget" />
+	</rules>
+</nlog>
