@@ -1,17 +1,45 @@
-app.UseExceptionHandler(  
-                options =>  
-                {  
-                    options.Run(  
-                        async context =>  
-                        {  
-                            context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;  
-                            context.Response.ContentType = "text/html";  
-                            var exceptionObject = context.Features.Get<IExceptionHandlerFeature>();  
-                            if (null != exceptionObject)  
-                            {  
-                                var errorMessage = $"<b>Exception Error: {exceptionObject.Error.Message} </b> {exceptionObject.Error.StackTrace}";  
-                                await context.Response.WriteAsync(errorMessage).ConfigureAwait(false);  
-                            }  
-                        });  
-                }  
-            );  
+using EmployeePortal.API.Dto;
+using EmployeePortal.API.Interfaces;
+using EmployeePortal.API.Middleware;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using static Dapper.SqlMapper;
+using System.Data.SqlClient;
+
+
+[ApiController]
+[Route("api/employees")]
+public class CCMSAPIController : ControllerBase
+{
+   
+    private readonly IRepository _ccmsRepository;
+  
+    //private readonly ILogMiddleware _logMiddleware; 
+    public CCMSAPIController(IRepository ccmsRepository)
+    {
+       
+        _ccmsRepository = ccmsRepository;
+      
+          // _logMiddleware = logMiddleware;
+    }
+
+    [HttpGet("{employee_ident}")]
+    public async Task<ActionResult> GetEmployeeByIdent(int employee_ident)
+    {
+        try
+        {
+            var result = await _ccmsRepository.GetEmployeeByIdent(employee_ident);
+            if (result == null)
+            {
+                return NotFound("Record Not found");
+            }
+            return Ok(result);
+        }
+        catch (Exception ex) { throw; }    
+    }
+
+
+}
