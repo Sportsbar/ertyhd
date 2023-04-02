@@ -1,28 +1,30 @@
-<?xml version="1.0" encoding="utf-8" ?>
-<nlog xmlns="http://www.nlog-project.org/schemas/NLog.xsd"
-      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-      autoReload="true"
-      internalLogLevel="Trace"
-      internalLogFile="internalLog.txt">
+using Microsoft.Owin.Security.DataHandler.Encoder;
+using Microsoft.Owin.Security.Jwt;
+using Owin;
 
-	<targets>
-		<target xsi:type="Database"
-      name="dbTarget"
-      connectionString="Data Source=DONTPANIC\MSSQLSERVER02;Initial Catalog=CCMS;Integrated Security=True;Encrypt=False;TrustServerCertificate=True;User Instance=False;"
-      commandText="INSERT INTO ep_errorlog(CreatedOn,MachineName,Message,Level,Exception,StackTrace,Logger) VALUES (@datetime,@machineName,@msg,@level,@exception,@trace,@logger)">
-			<parameter name="@datetime" layout="${date}" />
-			<parameter name="@machineName" layout="${machinename}" />
-			<parameter name="@msg" layout="${message}" />
-			<parameter name="@level" layout="${level}" />
-			<parameter name="@exception" layout="${exception}" />
-			<parameter name="@trace" layout="${stacktrace}" />
-			<parameter name="@logger" layout="${logger}" />
+[assembly: OwinStartupAttribute(typeof(TOMS.Frontend.Startup))]
+namespace TOMS.Frontend
+{
+    public partial class Startup
+    {
+        public void Configuration(IAppBuilder app)
+        {
+            ConfigureAuth(app);
+            ConfigureOAuthTokenConsumption(app);
+        }
 
-		</target>
-	</targets>
+        private void ConfigureOAuthTokenConsumption(IAppBuilder app)
+        {
+            var issuer = ConfigurationManager.AppSettings["Issuer"];
+            var audienceId = ConfigurationManager.AppSettings["AudienceId"];
+            var audienceSecret = TextEncodings.Base64Url.Decode(ConfigurationManager.AppSettings["AudienceSecret"]);
 
-	<rules>
-		<logger name="*" minlevel="Error" writeTo="dbTarget" />
-		<logger name="*" minlevel="Info" writeTo="dbTarget" />
-	</rules>
-</nlog>
+            // Api controllers with an [Authorize] attribute will be validated with JWT
+            app.UseJwtBearerAuthentication(new JwtBearerAuthenticationOptions
+            {
+                AuthenticationMode = AuthenticationMode.Active,
+                AllowedAudiences = new[] { audienceId },
+                IssuerSecurityTokenProviders = new IIssuerSecurityTokenProvider[]
+                {
+                    new SymmetricKeyIssuerSecurityTokenProvider(issuer, audienceSecret) 
+                }
