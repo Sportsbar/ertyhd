@@ -1,13 +1,10 @@
-Packages required:
-
-Dapper.Contrib
-
-Microsoft.AspNetCore.Authentication.AzureAD
-
-Microsoft.AspNetCore.Authentication.JwtBearer;
-
-microsoft.data.sqlclient\5.1.0
-
-microsoft.extensions.configuration.azurekeyvault
-
-RestSharp
+CREATE TABLE ep_errorlog (
+    Id INT PRIMARY KEY IDENTITY(1,1),
+    CreatedOn DATETIME NOT NULL,
+    MachineName NVARCHAR(50) NOT NULL,
+    Message NVARCHAR(MAX) NOT NULL,
+    Level NVARCHAR(50) NOT NULL,
+    Exception NVARCHAR(MAX) NULL,
+    StackTrace NVARCHAR(MAX) NULL,
+    Logger NVARCHAR(250) NOT NULL
+);
