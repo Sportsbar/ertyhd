@@ -1,49 +1,7 @@
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using EmployeePortal.API.Interfaces;
-using EmployeePortal.API.Entities;
-using System.Threading.Tasks;
-using EmployeePortal.API.Dto;
+Task<object> GetAllTools();
 
-namespace EmployeePortal.API.Controllers
-{
-    [Route("api")]
-    [ApiController]
-    public class AllToolsController : ControllerBase
-    {
-        private readonly IRepository _ccmsRepository;
+        // New methods for AllTools
 
-        public AllToolsController(IRepository ccmsRepository)
-        {
-            _ccmsRepository = ccmsRepository;
-        }
-
-        [HttpGet("getalltools")]
-        public async Task<IActionResult> GetAllTools()
-        {
-            var tools = await _ccmsRepository.GetAllTools();
-            return Ok(tools);
-        }
-        [HttpPost("insert")]
-        public async Task<IActionResult> InsertTool(AllTools.InsertToolRequest tool)
-        {
-            var result = await _ccmsRepository.InsertTool(tool);
-            return Ok(result);
-        }
-
-        [HttpPut("update")]
-        public async Task<IActionResult> UpdateTool(AllTools.UpdateToolRequest tool)
-        {
-            var result = await _ccmsRepository.UpdateTool(tool);
-            return Ok(result);
-        }
-
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteTool(int id)
-        {
-            var deleteRequest = new AllTools.DeleteToolRequest { Id = id };
-            var result = await _ccmsRepository.DeleteTool(deleteRequest);
-            return Ok(result);
-        }
-    }
-}
+        Task<object> InsertTool(AllTools.InsertToolRequest tool);
+        Task<object> UpdateTool(AllTools.UpdateToolRequest tool);
+        Task<object> DeleteTool(AllTools.DeleteToolRequest tool);
