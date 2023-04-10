@@ -1,76 +1,49 @@
-  #region AllTools
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using EmployeePortal.API.Interfaces;
+using EmployeePortal.API.Entities;
+using System.Threading.Tasks;
+using EmployeePortal.API.Dto;
 
-        public async Task<object> GetAllTools()
+namespace EmployeePortal.API.Controllers
+{
+    [Route("api")]
+    [ApiController]
+    public class AllToolsController : ControllerBase
+    {
+        private readonly IRepository _ccmsRepository;
+
+        public AllToolsController(IRepository ccmsRepository)
         {
-            try
-            {
-                // Implement your logic to call the "sel_getalltools" stored procedure using Dapper
-                var result = await _dbConnection.QueryAsync<object>("sel_getalltools", commandType: CommandType.StoredProcedure);
-                return result;
-            }
-            catch (Exception ex)
-            {
-                throw new ApiException(ex.Message);
-            }
+            _ccmsRepository = ccmsRepository;
         }
 
-        public async Task<object> InsertTool(AllTools.InsertToolRequest tool)
+        [HttpGet("getalltools")]
+        public async Task<IActionResult> GetAllTools()
         {
-            try
-            {
-                // Implement your logic to insert a new tool using the "commit_alltools" stored procedure
-                var parameters = new DynamicParameters();
-                parameters.Add("@action", "INSERT");
-                parameters.Add("@name", tool.Name);
-                parameters.Add("@url", tool.Url);
-                parameters.Add("@active", tool.Active);
-
-                var result = await _dbConnection.ExecuteAsync("commit_alltools", parameters, commandType: CommandType.StoredProcedure);
-                return result;
-            }
-            catch (Exception ex)
-            {
-                throw new ApiException(ex.Message);
-            }
+            var tools = await _ccmsRepository.GetAllTools();
+            return Ok(tools);
+        }
+        [HttpPost("insert")]
+        public async Task<IActionResult> InsertTool(AllTools.InsertToolRequest tool)
+        {
+            var result = await _ccmsRepository.InsertTool(tool);
+            return Ok(result);
         }
 
-        public async Task<object> UpdateTool(AllTools.UpdateToolRequest tool)
+        [HttpPut("update")]
+        public async Task<IActionResult> UpdateTool(AllTools.UpdateToolRequest tool)
         {
-            try
-            {
-                // Implement your logic to update an existing tool using the "commit_alltools" stored procedure
-                var parameters = new DynamicParameters();
-                parameters.Add("@action", "UPDATE");
-                parameters.Add("@id", tool.Id);
-                parameters.Add("@name", tool.Name);
-                parameters.Add("@url", tool.Url);
-                parameters.Add("@active", tool.Active);
-
-                var result = await _dbConnection.ExecuteAsync("commit_alltools", parameters, commandType: CommandType.StoredProcedure);
-                return result;
-            }
-            catch (Exception ex)
-            {
-                throw new ApiException(ex.Message);
-            }
+            var result = await _ccmsRepository.UpdateTool(tool);
+            return Ok(result);
         }
 
-        public async Task<object> DeleteTool(AllTools.DeleteToolRequest tool)
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteTool(int id)
         {
-            try
-            {
-                // Implement your logic to delete a tool using the "commit_alltools" stored procedure
-                var parameters = new DynamicParameters();
-                parameters.Add("@action", "DELETE");
-                parameters.Add("@id", tool.Id);
-
-                var result = await _dbConnection.ExecuteAsync("commit_alltools", parameters, commandType: CommandType.StoredProcedure);
-                return result;
-            }
-            catch (Exception ex)
-            {
-                throw new ApiException(ex.Message);
-            }
+            var deleteRequest = new AllTools.DeleteToolRequest { Id = id };
+            var result = await _ccmsRepository.DeleteTool(deleteRequest);
+            return Ok(result);
         }
-
-        #endregion
+    }
+}
