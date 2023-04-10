@@ -1,30 +1,76 @@
-namespace EmployeePortal.API.Dto
-{
-    public class AllTools
-    {
-        public InsertToolRequest InsertTool { get; set; }
-        public UpdateToolRequest UpdateTool { get; set; }
-        public DeleteToolRequest DeleteTool { get; set; }
+  #region AllTools
 
-        public class InsertToolRequest
+        public async Task<object> GetAllTools()
         {
-            public string Name { get; set; }
-            public string Url { get; set; }
-            public bool Active { get; set; }
+            try
+            {
+                // Implement your logic to call the "sel_getalltools" stored procedure using Dapper
+                var result = await _dbConnection.QueryAsync<object>("sel_getalltools", commandType: CommandType.StoredProcedure);
+                return result;
+            }
+            catch (Exception ex)
+            {
+                throw new ApiException(ex.Message);
+            }
         }
 
-        public class UpdateToolRequest
+        public async Task<object> InsertTool(AllTools.InsertToolRequest tool)
         {
-            public int Id { get; set; }
-            public string Name { get; set; }
-            public string Url { get; set; }
-            public bool Active { get; set; }
+            try
+            {
+                // Implement your logic to insert a new tool using the "commit_alltools" stored procedure
+                var parameters = new DynamicParameters();
+                parameters.Add("@action", "INSERT");
+                parameters.Add("@name", tool.Name);
+                parameters.Add("@url", tool.Url);
+                parameters.Add("@active", tool.Active);
+
+                var result = await _dbConnection.ExecuteAsync("commit_alltools", parameters, commandType: CommandType.StoredProcedure);
+                return result;
+            }
+            catch (Exception ex)
+            {
+                throw new ApiException(ex.Message);
+            }
         }
 
-
-        public class DeleteToolRequest
+        public async Task<object> UpdateTool(AllTools.UpdateToolRequest tool)
         {
-            public int Id { get; set; }
+            try
+            {
+                // Implement your logic to update an existing tool using the "commit_alltools" stored procedure
+                var parameters = new DynamicParameters();
+                parameters.Add("@action", "UPDATE");
+                parameters.Add("@id", tool.Id);
+                parameters.Add("@name", tool.Name);
+                parameters.Add("@url", tool.Url);
+                parameters.Add("@active", tool.Active);
+
+                var result = await _dbConnection.ExecuteAsync("commit_alltools", parameters, commandType: CommandType.StoredProcedure);
+                return result;
+            }
+            catch (Exception ex)
+            {
+                throw new ApiException(ex.Message);
+            }
         }
-    }
-}
+
+        public async Task<object> DeleteTool(AllTools.DeleteToolRequest tool)
+        {
+            try
+            {
+                // Implement your logic to delete a tool using the "commit_alltools" stored procedure
+                var parameters = new DynamicParameters();
+                parameters.Add("@action", "DELETE");
+                parameters.Add("@id", tool.Id);
+
+                var result = await _dbConnection.ExecuteAsync("commit_alltools", parameters, commandType: CommandType.StoredProcedure);
+                return result;
+            }
+            catch (Exception ex)
+            {
+                throw new ApiException(ex.Message);
+            }
+        }
+
+        #endregion
