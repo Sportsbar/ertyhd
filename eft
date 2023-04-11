@@ -1,23 +1,83 @@
- // Add services to the container.
-    //Getting connection string from azue key vault service
-    //builder.Host.ConfigureAppConfiguration((context, config) =>
-    //{
-    //    var settings = config.Build();
-    //    var keyVaultURL = settings["KeyVaultConfiguration:KeyVaultURL"];
-    //    var keyVaultClientId = settings["KeyVaultConfiguration:ClientId"];
-    //    var keyVaultClientSecret = settings["KeyVaultConfiguration:ClientSecret"];
-    //    config.AddAzureKeyVault(keyVaultURL, keyVaultClientId, keyVaultClientSecret, new DefaultKeyVaultSecretManager());
-    //});
+
+        [HttpPut("update/{id}")]
+        public async Task<IActionResult> UpdateTool(int id, AllTools.UpdateToolRequest tool)
+        {
+            // Set the Id from the route parameter
+            tool.Id = id;
+            var result = await _ccmsRepository.UpdateTool(id, tool);
+
+            if (result != null)
+            {
+                return Ok(new { Message = "Record updated successfully!" });
+            }
+            else
+            {
+                return Ok(new { Message = "Failed to update record!" });
+            }
+        }
+
+
+
+
+        [HttpDelete("delete/{id}")]
+        public async Task<IActionResult> DeleteTool(int id)
+        {
+            var deleteRequest = new AllTools.DeleteToolRequest { Id = id };
+            var result = await _ccmsRepository.DeleteTool(deleteRequest);
+
+            if (result != null)
+            {
+                return Ok(new { Message = "Record deleted successfully!" });
+            }
+            else
+            {
+                return Ok(new { Message = "Failed to delete record!" });
+            }
+        }
+    }
     
     
-     //"KeyVaultConfiguration": {
-  //  "KeyVaultURL": "https://empportalkeyvalut1.vault.azure.net/",
-  //  "ClientId": " ",
-  //  "ClientSecret": " "
-  //}
-  
-  
-  
-  
-            //local Connection string
-            //_dbConnection = new SqlConnection(_configuration["DefaultConnection"]);
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+     public async Task<object> DeleteTool(AllTools.DeleteToolRequest tool)
+        {
+            try
+            {
+                // Implement your logic to delete a tool using the "commit_alltools" stored procedure
+                var parameters = new DynamicParameters();
+                parameters.Add("@action", "DELETE");
+                parameters.Add("@id", tool.Id);
+                parameters.Add("@name", "");
+                parameters.Add("@url", "");
+                parameters.Add("@active", "");
+
+                var result = await _dbConnection.ExecuteAsync("commit_alltools", parameters, commandType: CommandType.StoredProcedure);
+                return result;
+            }
+            catch (Exception ex)
+            {
+                throw new ApiException(ex.Message);
+            }
+        }
