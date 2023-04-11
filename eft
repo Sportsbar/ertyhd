@@ -1,1 +1,42 @@
 
+ public EmployeeDetailsController(IRepository repository)
+        {
+            _repository = repository;
+        }
+
+        // GET api/EmployeeDetails/GetEmployeeAdjustmentDetails/112/hour_worked
+        [HttpGet("GetEmployeeAdjustmentDetails/{ccmsid}/{flag}")]
+        public async Task<IActionResult> GetEmployeeAdjustmentDetails(int ccmsid, string flag)
+        {
+            var result = await _repository.GetEmployeeAdjustmentDetails(ccmsid, flag);
+            return Ok(result);
+        }
+    }
+    
+    
+    
+    
+    
+        #region CCMS Database
+        public async Task<object> GetEmployeeAdjustmentDetails(int ccmsid, string flag)
+        {
+            try
+            {
+                var parameters = new DynamicParameters();
+                parameters.Add("@ccmsid", ccmsid);
+                parameters.Add("@flag", flag);
+
+                var result = await _dbConnection1.QueryAsync<object>("dbo.sel_employee_adjustmentdetails", parameters, commandType: CommandType.StoredProcedure);
+                if (result == null)
+                {
+                    throw new NotFoundApiException("Record not found");
+                }
+                return result;
+            }
+            catch (Exception ex)
+            {
+                throw new ApiException(ex.Message);
+            }
+        }
+
+        #endregion
