@@ -1,150 +1,215 @@
-var jwt = require('../index');
-var expect = require('chai').expect;
-var jws = require('jws');
-var PS_SUPPORTED = require('../lib/psSupported');
-const {generateKeyPairSync} = require("crypto");
+using EmployeePortal.API.Middleware;
+using Microsoft.Extensions.Primitives;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using System.Net;
+using System.Security.Claims;
+using System;
+using System.Linq;
+//using CCC.DBModel;
+//using CCC.Tokenization.CustomException;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
 
-describe('signing a token asynchronously', function() {
+namespace EmployeePortal.API.Helpers
+{
+    public class TokenHelper
+    {
+        private const string SCOPE = "scp";
 
-  describe('when signing a token', function() {
-    var secret = 'shhhhhh';
+        private const char SPACE = ' ';
 
-    it('should return the same result as singing synchronously', function(done) {
-      jwt.sign({ foo: 'bar' }, secret, { algorithm: 'HS256' }, function (err, asyncToken) {
-        if (err) return done(err);
-        var syncToken = jwt.sign({ foo: 'bar' }, secret, { algorithm: 'HS256' });
-        expect(asyncToken).to.be.a('string');
-        expect(asyncToken.split('.')).to.have.length(3);
-        expect(asyncToken).to.equal(syncToken);
-        done();
-      });
-    });
+        private const string Token_Validate_SERVER_URL = "TokenValidateServerUrl";
 
-    it('should work with empty options', function (done) {
-      jwt.sign({abc: 1}, "secret", {}, function (err) {
-        expect(err).to.be.null;
-        done();
-      });
-    });
+        private const string CLAIM_NAME = "sub";
 
-    it('should work without options object at all', function (done) {
-      jwt.sign({abc: 1}, "secret", function (err) {
-        expect(err).to.be.null;
-        done();
-      });
-    });
+        private const string AUTHORIZATION_HEADER_KEY = "Authorization";
 
-    it('should work with none algorithm where secret is set', function(done) {
-      jwt.sign({ foo: 'bar' }, 'secret', { algorithm: 'none' }, function(err, token) {
-        expect(token).to.be.a('string');
-        expect(token.split('.')).to.have.length(3);
-        done();
-      });
-    });
+        private const string BEARER = "Bearer ";
 
-    //Known bug: https://github.com/brianloveswords/node-jws/issues/62
-    //If you need this use case, you need to go for the non-callback-ish code style.
-    it.skip('should work with none algorithm where secret is falsy', function(done) {
-      jwt.sign({ foo: 'bar' }, undefined, { algorithm: 'none' }, function(err, token) {
-        expect(token).to.be.a('string');
-        expect(token.split('.')).to.have.length(3);
-        done();
-      });
-    });
+        private const char SLASH = '/';
 
-    it('should return error when secret is not a cert for RS256', function(done) {
-      //this throw an error because the secret is not a cert and RS256 requires a cert.
-      jwt.sign({ foo: 'bar' }, secret, { algorithm: 'RS256' }, function (err) {
-        expect(err).to.be.ok;
-        done();
-      });
-    });
+        private const string INVALID_TOKEN_ERROR_CODE = "ER401";
 
-    it('should not work for RS algorithms when modulus length is less than 2048 when allowInsecureKeySizes is false or not set', function(done) {
-      const { privateKey } = generateKeyPairSync('rsa', { modulusLength: 1024 });
+        private const string INVALID_TOKEN_ERROR_MESSAGE = "Invalid Token";
 
-      jwt.sign({ foo: 'bar' }, privateKey, { algorithm: 'RS256' }, function (err) {
-        expect(err).to.be.ok;
-        done();
-      });
-    });
+        private const string TOKEN_EXPIRED_ERROR_CODE = "ER401";
 
-    it('should work for RS algorithms when modulus length is less than 2048 when allowInsecureKeySizes is true', function(done) {
-      const { privateKey } = generateKeyPairSync('rsa', { modulusLength: 1024 });
+        private const string TOKEN_EXPIRED_ERROR_MESSAGE = "Token has been expired";
 
-      jwt.sign({ foo: 'bar' }, privateKey, { algorithm: 'RS256', allowInsecureKeySizes: true }, done);
-    });
+        private const string INVALID_TOKEN_ISSUER = "Invalid token issuer";
 
-    if (PS_SUPPORTED) {
-      it('should return error when secret is not a cert for PS256', function(done) {
-        //this throw an error because the secret is not a cert and PS256 requires a cert.
-        jwt.sign({ foo: 'bar' }, secret, { algorithm: 'PS256' }, function (err) {
-          expect(err).to.be.ok;
-          done();
-        });
-      });
+        private const string USERDOES_NOT_EXIST = "User Does Not exits";
+
+        private const string URL_DOES_NOT_EXISTS = "URL Does Not exits";
+
+        public AuthData PrepareAPIRequestObject(HttpRequest request)
+        {
+            if (request == null || request.Headers == null)
+            {
+                return null;
+            }
+
+            string text = string.Join("/", request.Path.ToUriComponent().Split(new char[1] { '/' }).Take(4)
+                .ToList());
+            if (!text.Last().Equals('/'))
+            {
+                text += "/";
+            }
+
+            string accessToken = string.Empty;
+            if (request.Headers.ContainsKey("Authorization"))
+            {
+                StringValues value = default(StringValues);
+                if (request.Headers.TryGetValue("Authorization", out value))
+                {
+                    accessToken = value.FirstOrDefault((string v) => v.StartsWith("Bearer "));
+                }
+            }
+
+            AuthData RequestAuthData = new AuthData
+            {
+                Url = text,
+                RequestType = request.Method.ToString(),
+                AccessToken = accessToken
+            };
+            ValidateAccessToken(RequestAuthData);
+            //UserProfile userProfile = crispContext.UserProfile.Where((UserProfile x) => x.Username == RequestAuthData.UserName && x.IsActive == true).FirstOrDefault();
+            //if (userProfile == null)
+            //{
+            //    throw new ObjectNotFoundException("User Does Not exits");
+            //}
+
+            //RequestAuthData.UserId = userProfile.UserId;
+            return RequestAuthData;
+        }
+
+        public AuthData ValidateAccessToken(AuthData authData)
+        {
+            authData.AccessToken = ExtractAccessToken(authData);
+            JwtSecurityTokenHandler jwtSecurityTokenHandler = new JwtSecurityTokenHandler();
+            if (!jwtSecurityTokenHandler.CanReadToken(authData.AccessToken))
+            {
+                throw new Exception("Invalid Token" + HttpStatusCode.Unauthorized);
+            }
+
+            JwtSecurityToken jwtSecurityToken = null;
+            try
+            {
+                jwtSecurityToken = jwtSecurityTokenHandler.ReadToken(authData.AccessToken) as JwtSecurityToken;
+            }
+            catch (Exception)
+            {
+                throw new Exception("InvalidAccessTokenVoilationException Token" + HttpStatusCode.Unauthorized);
+            }
+
+            if (jwtSecurityToken == null)
+            {
+                throw new Exception("InvalidAccessTokenVoilationException Token" + HttpStatusCode.Unauthorized);
+            }
+
+            if (IsSSOUser(jwtSecurityToken))
+            {
+                ValidateClaimsPrincipal(authData, jwtSecurityTokenHandler);
+            }
+
+            return ExtractPayload(jwtSecurityToken, authData);
+        }
+
+        private bool IsSSOUser(JwtSecurityToken jwtToken)
+        {
+            JwtPayload payload = jwtToken.Payload;
+            if (payload.Keys.Contains("unique_name"))
+            {
+                payload["unique_name"].ToString();
+                return true;
+            }
+
+            return false;
+        }
+
+        private AuthData ExtractPayload(JwtSecurityToken jwtToken, AuthData authData)
+        {
+            JwtPayload payload = jwtToken.Payload;
+            if (payload.Keys.Contains("clientId"))
+            {
+                authData.Client = payload["clientId"].ToString();
+            }
+
+            if (payload.Keys.Contains("userName"))
+            {
+                authData.UserName = payload["userName"].ToString();
+            }
+
+            if (payload.Keys.Contains("unique_name"))
+            {
+                authData.UserName = payload["unique_name"].ToString();
+            }
+
+            if (payload.Keys.Contains("name"))
+            {
+                authData.Name = payload["name"].ToString();
+            }
+
+            if (payload.Keys.Contains("roleid"))
+            {
+                int.TryParse(payload["roleid"].ToString(), out var result);
+                authData.RoleId = result;
+            }
+
+            return authData;
+        }
+
+        private static string ExtractAccessToken(AuthData authData)
+        {
+            if (!string.IsNullOrEmpty(authData.AccessToken) && Enumerable.Contains(authData.AccessToken, ' '))
+            {
+                string[] array = authData.AccessToken.Split(new char[1] { ' ' });
+                if (array.Length != 0 && !string.IsNullOrEmpty(array[1]))
+                {
+                    return array[1];
+                }
+            }
+            throw new Exception("InvalidAccessTokenVoilationException Token" + HttpStatusCode.Unauthorized);
+            //throw new InvalidAccessTokenVoilationException("ER401", "Invalid Token", HttpStatusCode.Unauthorized);
+        }
+
+        private static void ValidateClaimsPrincipal(AuthData authData, JwtSecurityTokenHandler handler)
+        {
+            handler.InboundClaimTypeMap.Clear();
+             //string validIssuer = configuration.GetSection("AppSettings:TokenValidateServerUrl").Get<string>();
+            string validIssuer = string.Empty;
+            try
+            {
+                SecurityToken validatedToken;
+                ClaimsPrincipal claimsPrincipal = handler.ValidateToken(authData.AccessToken, new TokenValidationParameters
+                {
+                    ValidateAudience = false,
+                    ValidIssuer = validIssuer,
+                    ValidateIssuerSigningKey = false,
+                    ValidateLifetime = true,
+                    SignatureValidator = (string t, TokenValidationParameters param) => new JwtSecurityToken(t),
+                    NameClaimType = "sub"
+                }, out validatedToken);
+                if (!claimsPrincipal.Claims.Any((Claim c) => c.Type == "scp"))
+                {
+                    throw new Exception("InvalidAccessTokenVoilationException Token" + HttpStatusCode.Unauthorized);
+                    //throw new InvalidAccessTokenVoilationException("ER401", "Invalid Token", HttpStatusCode.Unauthorized);
+                }
+            }
+            catch (SecurityTokenExpiredException)
+            {
+                throw new Exception("InvalidAccessTokenVoilationException Token" + HttpStatusCode.Unauthorized);
+                //throw new AccessTokenExpiredVoilationException("ER401", "Token has been expired", HttpStatusCode.Unauthorized);
+            }
+            //catch (InvalidTokenIssuerException)
+            //{
+            //    throw new InvalidTokenIssuerException("Invalid token issuer");
+            //}
+            //catch (ObjectNotFoundException)
+            //{
+            //    throw new ObjectNotFoundException("URL Does Not exits");
+            //}
+        }
     }
-
-    it('should return error on wrong arguments', function(done) {
-      //this throw an error because the secret is not a cert and RS256 requires a cert.
-      jwt.sign({ foo: 'bar' }, secret, { notBefore: {} }, function (err) {
-        expect(err).to.be.ok;
-        done();
-      });
-    });
-
-    it('should return error on wrong arguments (2)', function(done) {
-      jwt.sign('string', 'secret', {noTimestamp: true}, function (err) {
-        expect(err).to.be.ok;
-        expect(err).to.be.instanceof(Error);
-        done();
-      });
-    });
-
-    it('should not stringify the payload', function (done) {
-      jwt.sign('string', 'secret', {}, function (err, token) {
-        if (err) { return done(err); }
-        expect(jws.decode(token).payload).to.equal('string');
-        done();
-      });
-    });
-
-    describe('when mutatePayload is not set', function() {
-      it('should not apply claims to the original payload object (mutatePayload defaults to false)', function(done) {
-        var originalPayload = { foo: 'bar' };
-        jwt.sign(originalPayload, 'secret', { notBefore: 60, expiresIn: 600 }, function (err) {
-          if (err) { return done(err); }
-          expect(originalPayload).to.not.have.property('nbf');
-          expect(originalPayload).to.not.have.property('exp');
-          done();
-        });
-      });
-    });
-
-    describe('when mutatePayload is set to true', function() {
-      it('should apply claims directly to the original payload object', function(done) {
-        var originalPayload = { foo: 'bar' };
-        jwt.sign(originalPayload, 'secret', { notBefore: 60, expiresIn: 600, mutatePayload: true }, function (err) {
-          if (err) { return done(err); }
-          expect(originalPayload).to.have.property('nbf').that.is.a('number');
-          expect(originalPayload).to.have.property('exp').that.is.a('number');
-          done();
-        });
-      });
-    });
-
-    describe('secret must have a value', function(){
-      [undefined, '', 0].forEach(function(secret){
-        it('should return an error if the secret is falsy and algorithm is not set to none: ' + (typeof secret === 'string' ? '(empty string)' : secret), function(done) {
-        // This is needed since jws will not answer for falsy secrets
-          jwt.sign('string', secret, {}, function(err, token) {
-            expect(err).to.exist;
-            expect(err.message).to.equal('secretOrPrivateKey must have a value');
-            expect(token).to.not.exist;
-            done();
-          });
-        });
-      });
-    });
-  });
-});
+}
