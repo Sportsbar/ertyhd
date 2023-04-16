@@ -11,13 +11,18 @@ function getInitiatives() {
                 appenddata += "<option value='" + result[i].id + "'>" + result[i].name + " </option>";
             }
             $("#initiatives").append(appenddata);
-            $("#initiatives").select2();
+            $("#initiatives").select2({
+                // Enable search functionality
+                allowClear: true,
+                placeholder: '--Select--'
+            });
         },
         error: function (err) {
             console.log("error: " + err);
         }
     });
 }
+
 
 
 
@@ -40,3 +45,4 @@ function getInitiatives() {
 <script src="~/js/ticket.js"></script>
 <script src="~/lib/select2/js/select2.min.js"></script>
 <link href="~/lib/select2/css/select2.min.css" rel="stylesheet" />
+
