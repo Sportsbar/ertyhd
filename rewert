@@ -1,466 +1,129 @@
-$(document).ready(function () {
-    //Calling functions on page load
-    getInitiiatives(); 
-    getBackLog();
-    getRagStatus();
-    getBillingEffort();
-    getPriority();
-    getCountry();
-    getStatus();
-    getAssignee();
-    getWorkStreams();
-    
-    // For search and seleect dropdown
+<link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+<link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/JiraTicketingTool.styles.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/ticket.css" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" />
 
-    $('select').select2();
+<script src="~/lib/jquery/dist/jquery.min.js"></script>
+<script src="~/js/ticket.js"></script>
 
-    //Initiatives on change event handling
-    $("#initiatives").change(function () {
-        var projectDescription = $("#initiatives").val();
-        getProjects(projectDescription);
-    });
-    //ProjectList on change event handling
-    $("#projectList").change(function () {
-        var projectDescription = $("#initiatives").val();
-        var projectName = $("#projectList").val();
-        getEpics(projectDescription, projectName);
-    });
-    //epicList on change event handling
-    $("#epicList").change(function () {
-        var projectDescription = $("#epicList").val();
-        var projectName = $("#projectList").val();
-        getTasks(projectDescription, projectName);
-        getStory(projectDescription, projectName);
-        if (projectDescription) {
-            $("#divIssueType").css("display", "block");
-        } else {
-            $("#divIssueType").css("display", "none");
-        }
-    });
-    //status on change event handling
-    $("#status").change(function () {
-        var status = $("#status").val();
-        getSubStatus(status);
-    });
-    //Click Event issueType
-    $("#issueTypeSubTask").click(function () {
-        $('#issueTypeModal').modal('show');
-        $("#dynamicText").text("SubTask");
-    });
-    $("#issueTypeBug").click(function () {
-        $('#issueTypeModal').modal('show');
-        $("#dynamicText").text("Bug");
-    });
-    $("#modalTask").click(function () {
-        $('#issueTypeModal').modal('hide');
-        $("#divTaskList").css("display", "block");
-        $("#divStoryList").css("display", "none");
-    });
-    $("#modalStory").click(function () {
-        $('#issueTypeModal').modal('hide');
-        $("#divTaskList").css("display", "none");
-        $("#divStoryList").css("display", "block");
-    });
-    //initiatives
-    // Initiatives
-    function getInitiatives() {
-        $.ajax({
-            url: 'Ticket/GetInitiatives',
-            type: 'GET',
-            async: true,
-            dataType: 'json',
-            success: function (result) {
-                var appenddata = "<option value=''>" + '--Select--' + " </option>";
-                for (var i = 0; i < result.length; i++) {
-                    appenddata += "<option value='" + result[i].id + "'>" + result[i].name + " </option>";
-                }
-                $("#initiatives").append(appenddata);
-            },
-            error: function (err) {
-                console.log("error: " + err);
-            }
-        });
-    }
+<div class="container" style="margin-top:50px;">
+    <div class="form-heading">Form</div>
+    <form id="jiraForm">
+        <!-- row-1 -->
+        <div class="row">
+            <div class="col-2">
+                <label>Initiatives</label>
+                <select class="form-select" id="initiatives"></select>
+            </div>
+            <div class="col-3">
+                <label>ProjectList</label>
+                <select class="form-select" id="projectList"></select>
+            </div>
+            <div class="col-2">
+                <label>EpicList</label>
+                <select class="form-select" id="epicList"></select>
+            </div>
+            <div class="col-3">
+                <label>Issue Type</label>
+                <select class="form-select" id="issueType">
+                    <option>Select</option>
+                </select>
+            </div>
+            <div class="col-2">
+                <label>Issue Level</label>
+                <select class="form-select" disabled id="issueLevel">
+                    <option>Select</option>
+                </select>
+            </div>
+        </div>
+        <!-- row-2 -->
+        <div class="row">
+            <div class="col-2">
+                <label>Summary</label>
+                <textarea class="form-control" id="summary"></textarea>
+            </div>
+            <div class="col-3">
+                <label>BillingEffort</label>
+                <select class="form-select" id="billingEffort"></select>
+            </div>
+            <div class="col-2">
+                <label>Assignee</label>
+                <select class="form-select" id="assignee"></select>
+            </div>
+            <div class="col-3">
+                <label>Description</label>
+                <textarea class="form-control" rows="-1" id="description"></textarea>
+            </div>
+            <div class="col-2">
+                <label>isBackLog</label>
+                <select class="form-select" id="isBackLog"></select>
+            </div>
+        </div>
+        <!-- row-3 -->
+        <div class="row">
+            <div class="col-2">
+                <label>RagStatus</label>
+                <select class="form-select" id="ragStatus"></select>
+            </div>
+            <div class="col-3">
+                <label>Workstreams</label>
+                <select class="form-select" id="workstreams"></select>
+            </div>
+            <div class="col-2">
+                <label>Actual Start Date</label>
+                <input type="date" class="form-control" id="actualStartDate" />
+            </div>
 
-    //projects
-    // Projects
-    function getProjects(projectDescription) {
-        $.ajax({
-            url: 'Ticket/GetProjects?projectDescription=' + projectDescription,
-            type: 'GET',
-            async: true,
-            dataType: 'json',
-            success: function (result) {
-                $("#projectList").empty();
-                var appenddata = "<option value=''>" + '--Select--' + " </option>";
-                for (var i = 0; i < result.length; i++) {
-                    appenddata += "<option value='" + result[i].id + "'>" + result[i].name + " </option>";
-                }
-                $("#projectList").append(appenddata);
-
-                // Update Select2 after dynamically adding options
-                $("#projectList").select2();
-            },
-            error: function (err) {
-                console.log("error: " + err);
-
-            }
-        });
-    }
-    //epics
-    // Epics
-    function getEpics(projectDescription, projectName) {
-        $.ajax({
-            url: 'Ticket/GetEpics?projectDescription=' + projectDescription + '&projectName=' + projectName,
-            type: 'GET',
-            async: true,
-            dataType: 'json',
-            success: function (result) {
-                $("#epicList").empty();
-                var appenddata = "<option value=''>" + '--Select--' + " </option>";
-                for (var i = 0; i < result.length; i++) {
-                    appenddata += "<option value='" + result[i].id + "'>" + result[i].name + " </option>";
-                }
-                $("#epicList").append(appenddata);
-
-                // Update Select2 after dynamically adding options
-                $("#epicList").select2();
-            },
-            error: function (err) {
-                console.log("error: " + err);
-            }
-        });
-    }
-    //isBackLog
-    function getBackLog() {
-        $.ajax({
-            url: 'Ticket/GetBackLog',
-            type: 'GET',
-            async: true,
-            dataType: 'json',
-            success: function (result) {
-                var appenddata = "<option value = ''>" + '--Select--' + " </option>";
-                for (var i = 0; i < result.length; i++) {
-                    appenddata += "<option value='" + result[i].id + "'>" + result[i].name + " </option>";
-                }
-                $("#isBackLog").append(appenddata);
-            },
-            error: function (err) {
-                console.log("error: " + err);
-
-            }
-        });
-    }
-    //RagStatus
-    function getRagStatus() {
-        $.ajax({
-            url: 'Ticket/GetRagStatus',
-            type: 'GET',
-            async: true,
-            dataType: 'json',
-            success: function (result) {
-                var appenddata = "<option value = ''>" + '--Select--' + " </option>";
-                for (var i = 0; i < result.length; i++) {
-                    appenddata += "<option value='" + result[i].id + "'>" + result[i].name + " </option>";
-                }
-                $("#ragStatus").append(appenddata);
-            },
-            error: function (err) {
-                console.log("error: " + err);
-
-            }
-        });
-    }
-    //BillingEffort
-    function getBillingEffort() {
-        $.ajax({
-            url: 'Ticket/GetBillingEffort',
-            type: 'GET',
-            async: true,
-            dataType: 'json',
-            success: function (result) {
-                var appenddata = "<option value = ''>" + '--Select--' + " </option>";
-                for (var i = 0; i < result.length; i++) {
-                    appenddata += "<option value='" + result[i].id + "'>" + result[i].name + " </option>";
-                }
-                $("#billingEffort").append(appenddata);
-            },
-            error: function (err) {
-                console.log("error: " + err);
-
-            }
-        });
-    }
-    //Priority
-    function getPriority() {
-        $.ajax({
-            url: 'Ticket/GetPriority',
-            type: 'GET',
-            async: true,
-            dataType: 'json',
-            success: function (result) {
-                var appenddata = "<option value = ''>" + '--Select--' + " </option>";
-                for (var i = 0; i < result.length; i++) {
-                    appenddata += "<option value='" + result[i].id + "'>" + result[i].name + " </option>";
-                }
-                $("#priority").append(appenddata);
-            },
-            error: function (err) {
-                console.log("error: " + err);
-
-            }
-        });
-    }
-    //Country
-    function getCountry() {
-        $.ajax({
-            url: 'Ticket/GetCountry',
-            type: 'GET',
-            async: true,
-            dataType: 'json',
-            success: function (result) {
-                var $originatingCountryGroup = $("#originatingCountryGroup");
-                $originatingCountryGroup.empty();
-                var appenddata = "<option value=''></option>"; // Removed '--Select--' as Select2 will handle it
-                for (var i = 0; i < result.length; i++) {
-                    appenddata += "<option value='" + result[i].id + "'>" + result[i].name + " </option>";
-                }
-                $originatingCountryGroup.append(appenddata);
-
-                // Initialize Select2 plugin
-                $originatingCountryGroup.select2();
-            },
-            error: function (err) {
-                console.log("error: " + err);
-            }
-        });
-    }
-
-    //Status
-    function getStatus() {
-        $.ajax({
-            url: 'Ticket/GetStatus',
-            type: 'GET',
-            async: true,
-            dataType: 'json',
-            success: function (result) {
-                var appenddata = "<option value = ''>" + '--Select--' + " </option>";
-                for (var i = 0; i < result.length; i++) {
-                    appenddata += "<option value='" + result[i].id + "'>" + result[i].name + " </option>";
-                }
-                $("#status").append(appenddata);
-            },
-            error: function (err) {
-                console.log("error: " + err);
-
-            }
-        });
-    }
-    //substatus
-    function getSubStatus(status) {
-        $.ajax({
-            url: 'Ticket/GetSubStatus?status=' + status,
-            type: 'GET',
-            async: true,
-            dataType: 'json',
-            success: function (result) {
-                $("#subStatus").empty();
-                var appenddata = "<option value = ''>" + '--Select--' + " </option>";
-                for (var i = 0; i < result.length; i++) {
-                    appenddata += "<option value='" + result[i].id + "'>" + result[i].name + " </option>";
-                }
-                $("#subStatus").append(appenddata);
-            },
-            error: function (err) {
-                console.log("error: " + err);
-
-            }
-        });
-    }
-    function getAssignee() {
-        $.ajax({
-            url: 'Ticket/GetAssignee',
-            type: 'GET',
-            async: true,
-            dataType: 'json',
-            success: function (result) {
-                var $assignee = $("#assignee");
-                $assignee.empty();
-                var appenddata = "<option value=''></option>"; // Removed '--Select--' as Select2 will handle it
-                for (var i = 0; i < result.length; i++) {
-                    appenddata += "<option value='" + result[i].id + "'>" + result[i].name + " </option>";
-                }
-                $assignee.append(appenddata);
-
-                // Initialize Select2 plugin
-                $assignee.select2();
-            },
-            error: function (err) {
-                console.log("error: " + err);
-            }
-        });
-    }
-
-    //Workstreams
-    function getWorkStreams() {
-        $.ajax({
-            url: 'Ticket/GetWorkStreams',
-            type: 'GET',
-            async: true,
-            dataType: 'json',
-            success: function (result) {
-                var appenddata = "<option value = ''>" + '--Select--' + " </option>";
-                for (var i = 0; i < result.length; i++) {
-                    appenddata += "<option value='" + result[i].id + "'>" + result[i].name + " </option>";
-                }
-                $("#workstreams").append(appenddata);
-            },
-            error: function (err) {
-                console.log("error: " + err);
-
-            }
-        });
-    }   
-    //tasks
-    function getTasks(projectDescription, projectName) {
-        $.ajax({
-            url: 'Ticket/GetTasks?projectDescription=' + projectDescription + '&projectName=' + projectName,
-            type: 'GET',
-            async: true,
-            dataType: 'json',
-            success: function (result) {
-                var $taskList = $("#taskList");
-                $taskList.empty();
-                var appenddata = "<option value=''></option>"; // Removed '--Select--' as Select2 will handle it
-                for (var i = 0; i < result.length; i++) {
-                    appenddata += "<option value='" + result[i].id + "'>" + result[i].name + " </option>";
-                }
-                $taskList.append(appenddata);
-
-                // Initialize Select2 plugin
-                $taskList.select2();
-            },
-            error: function (err) {
-                console.log("error: " + err);
-            }
-        });
-    }
-
-    //story
-    function getStory(projectDescription, projectName) {
-        $.ajax({
-            url: 'Ticket/GetStory?projectDescription=' + projectDescription + '&projectName=' + projectName,
-            type: 'GET',
-            async: true,
-            dataType: 'json',
-            success: function (result) {
-                var $storyList = $("#storyList");
-                $storyList.empty();
-                var appenddata = "<option value=''></option>"; // Removed '--Select--' as Select2 will handle it
-                for (var i = 0; i < result.length; i++) {
-                    appenddata += "<option value='" + result[i].id + "'>" + result[i].name + " </option>";
-                }
-                $storyList.append(appenddata);
-
-                // Initialize Select2 plugin
-                $storyList.select2();
-            },
-            error: function (err) {
-                console.log("error: " + err);
-            }
-        });
-    }
-
-    $("#jiraForm").submit(function () {
-        event.preventDefault();
-
-        var initiatives = $("#initiatives").val();
-        var projectList = $("#projectList").val();
-        var epicList = $("#epicList").val();
-        var issueType = $("#issueType").val();
-        var issueLevel = $("#issueLevel").val();
-        var summary = $("#summary").val();
-        var billingEffort = $("#billingEffort").val();
-        var assignee = $("#assignee").val();
-        var description = $("#description").val();
-        var isBackLog = $("#isBackLog").val();
-        var ragStatus = $("#ragStatus").val();
-        var workstreams = $("#workstreams").val();
-        var actualStartDate = $("#actualStartDate").val();
-        var actualEndDate = $("#actualEndDate").val();
-        var productionReleaseDate = $("#productionReleaseDate").val();
-        var dueDate = $("#dueDate").val();
-        var requestor = $("#requestor").val();
-        var sdTicketNumber = $("#sdTicketNumber").val();
-        var status = $("#status").val();
-        var subStatus = $("#subStatus").val();
-        var priority = $("#priority").val();
-        var originatingCountryGroup = $("#originatingCountryGroup").val();
-        
-        var taskList = $("#taskList").val();
-        var storyList = $("#storyList").val();
-
-        var modalIssueType = $('input[name="modalIssueType"]:checked').val();
-        var radioIssueType = $('input[name="issueType"]:checked').val();
+        </div>
+        <div class="col-2">
+            <label>Prod Release Date</label>
+            <input type="date" class="form-control" id="productionReleaseDate" />
 
 
-
-        //console.log(initiatives);
-        //console.log(projectList);
-        //console.log(epicList);
-        //console.log(issueType);
-        //console.log(issueLevel);
-        //console.log(summary);
-        //console.log(billingEffort);
-        //console.log(assignee);
-        //console.log(description);
-        //console.log(isBackLog);
-        //console.log(ragStatus);
-        //console.log(workstreams);
-        //console.log(actualStartDate);
-        //console.log(actualEndDate);
-        //console.log(productionReleaseDate);
-        //console.log(dueDate);
-        //console.log(requestor);
-        //console.log(sdTicketNumber);
-        //console.log(status);
-        //console.log(subStatus);
-        //console.log(priority);
-        //console.log(originatingCountryGroup);
-        //console.log(taskList);
-        //console.log(storyList);
-        //console.log(modalIssueType);
-        //console.log(radioIssueType);
-
-        var formData = new FormData();
-        formData.append("initiatives", initiatives);
-        formData.append("projectList", projectList);
-        formData.append("epicList", epicList);
-        formData.append("issueType", issueType);
-        formData.append("issueLevel", issueLevel);
-        formData.append("summary", summary);
-        formData.append("billingEffort", billingEffort);
-        formData.append("assignee", assignee);
-        formData.append("description", description);
-        formData.append("isBackLog", isBackLog);
-        formData.append("ragStatus", ragStatus);
-        formData.append("workstreams", workstreams);
-        formData.append("actualStartDate", actualStartDate);
-        formData.append("actualEndDate", actualEndDate);
-        formData.append("productionReleaseDate", productionReleaseDate);
-        formData.append("dueDate", dueDate);
-        formData.append("requestor", requestor);
-        formData.append("sdTicketNumber", sdTicketNumber);
-        formData.append("status", status);
-        formData.append("subStatus", subStatus);
-        formData.append("priority", priority);
-        formData.append("originatingCountryGroup", originatingCountryGroup);
-        formData.append("taskList", taskList);
-        formData.append("storyList", storyList);
-        formData.append("modalIssueType", modalIssueType);
-        formData.append("radioIssueType", radioIssueType);
-        console.log(formData);
+        </div>
+</div>
+@*row-4*@
+<div class="row">
+    <div class="col-2">
+        <label>Due Date</label>
+        <input type="date" class="form-control" id="dueDate" />
+    </div>
+    <div class="col-3">
+        <label>Requestor Details</label>
+        <input type="text" id="requestor" class="form-control">
+    </div>
+    <div class="col-2">
+        <label>SD Ticket Number</label>
+        <input class="form-control" type="text" id="sdTicketNumber" />
+    </div>
+    <div class="col-3">
+        <label>Status</label>
+        <select class="form-select" id="status"></select>
+    </div>
+    <div class="col-2">
+        <label>Sub Status</label>
+        <select class="form-select" id="subStatus"></select>
+    </div>
+</div>
+@*row-5*@
+<div class="row">
+    <div class="col-2">
+        <label>Priority</label>
+        <select class="form-select" id="priority"></select>
+    </div>
+    <div class="col-3">
+        <label>Originating Country / Group</label>
+        <select class="form-select" id="originatingCountryGroup"></select>
+    </div>
+</div>
+<div class="col-12">
+    <div style="text-align:right;">
+        <input type="submit" class="btn btn-primary" name="Submit" value="Submit" />
+        <input type="reset" class="btn btn-primary" name="Reset" value="Reset" />
+    </div>
+</div>
+    </form>
+</div>
 
 
-    });
-});
