@@ -1,7 +1,7 @@
 <link rel="stylesheet" href="/lib/bootstrap/dist/css/bootstrap.min.css" />
 <link rel="stylesheet" href="/css/site.css" asp-append-version="true" />
 <link rel="stylesheet" href="/JiraTicketingTool.styles.css" asp-append-version="true" />
-<link rel="stylesheet" href="/css/ticket.css" rel="stylesheet" />
+<link rel="stylesheet" href="/css/ticket.css" />
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" />
 
 <script src="/lib/jquery/dist/jquery.min.js"></script>
