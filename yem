@@ -1,48 +1,20 @@
-// Initiatives
-function getInitiatives() {
-    $.ajax({
-        url: 'Ticket/GetInitiatives',
-        type: 'GET',
-        async: true,
-        dataType: 'json',
-        success: function (result) {
-            var appenddata = "<option value=''>" + '--Select--' + " </option>";
-            for (var i = 0; i < result.length; i++) {
-                appenddata += "<option value='" + result[i].id + "'>" + result[i].name + " </option>";
-            }
-            $("#initiatives").append(appenddata);
-            $("#initiatives").select2({
-                // Enable search functionality
-                allowClear: true,
-                placeholder: '--Select--'
-            });
-        },
-        error: function (err) {
-            console.log("error: " + err);
-        }
-    });
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+<!-- Include Bootstrap CSS -->
 <link href="~/lib/bootstrap/css/bootstrap.min.css" rel="stylesheet" />
+
+<!-- Include your custom CSS -->
 <link rel="stylesheet" href="~/css/ticket.css" rel="stylesheet" />
 
-<script src="~/lib/jquery/jquery.min.js"></script>
-<script src="~/lib/bootstrap/js/bootstrap.min.js"></script>
-<script src="~/js/ticket.js"></script>
-<script src="~/lib/select2/js/select2.min.js"></script>
-<link href="~/lib/select2/css/select2.min.css" rel="stylesheet" />
+<!-- Include jQuery library from Cloudflare CDN -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
+<!-- Include Bootstrap JS -->
+<script src="~/lib/bootstrap/js/bootstrap.min.js"></script>
+
+<!-- Include your custom JS -->
+<script src="~/js/ticket.js"></script>
+
+<!-- Include Select2 CSS from Cloudflare CDN -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
+
+<!-- Include Select2 JS from Cloudflare CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
