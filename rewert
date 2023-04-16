@@ -1,8 +1,13 @@
 <link rel="stylesheet" href="/lib/bootstrap/dist/css/bootstrap.min.css" />
 <link rel="stylesheet" href="/css/site.css" asp-append-version="true" />
 <link rel="stylesheet" href="/JiraTicketingTool.styles.css" asp-append-version="true" />
-<link rel="stylesheet" href="/css/ticket.css" />
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" />
+<link rel="stylesheet" href="/css/ticket.css" rel="stylesheet" />
+
+<!-- Include Select2 CSS -->
+<link rel="stylesheet" href="/lib/select2/css/select2.min.css" />
 
 <script src="/lib/jquery/dist/jquery.min.js"></script>
+<script src="/lib/select2/js/select2.min.js"></script>
+
+<!-- Include your custom ticket.js file after jQuery and Select2 -->
 <script src="/js/ticket.js"></script>
