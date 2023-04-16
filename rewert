@@ -5,125 +5,26 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" />
 
 <script src="~/lib/jquery/dist/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
 <script src="~/js/ticket.js"></script>
 
-<div class="container" style="margin-top:50px;">
-    <div class="form-heading">Form</div>
-    <form id="jiraForm">
-        <!-- row-1 -->
-        <div class="row">
-            <div class="col-2">
-                <label>Initiatives</label>
-                <select class="form-select" id="initiatives"></select>
-            </div>
-            <div class="col-3">
-                <label>ProjectList</label>
-                <select class="form-select" id="projectList"></select>
-            </div>
-            <div class="col-2">
-                <label>EpicList</label>
-                <select class="form-select" id="epicList"></select>
-            </div>
-            <div class="col-3">
-                <label>Issue Type</label>
-                <select class="form-select" id="issueType">
-                    <option>Select</option>
-                </select>
-            </div>
-            <div class="col-2">
-                <label>Issue Level</label>
-                <select class="form-select" disabled id="issueLevel">
-                    <option>Select</option>
-                </select>
-            </div>
-        </div>
-        <!-- row-2 -->
-        <div class="row">
-            <div class="col-2">
-                <label>Summary</label>
-                <textarea class="form-control" id="summary"></textarea>
-            </div>
-            <div class="col-3">
-                <label>BillingEffort</label>
-                <select class="form-select" id="billingEffort"></select>
-            </div>
-            <div class="col-2">
-                <label>Assignee</label>
-                <select class="form-select" id="assignee"></select>
-            </div>
-            <div class="col-3">
-                <label>Description</label>
-                <textarea class="form-control" rows="-1" id="description"></textarea>
-            </div>
-            <div class="col-2">
-                <label>isBackLog</label>
-                <select class="form-select" id="isBackLog"></select>
-            </div>
-        </div>
-        <!-- row-3 -->
-        <div class="row">
-            <div class="col-2">
-                <label>RagStatus</label>
-                <select class="form-select" id="ragStatus"></select>
-            </div>
-            <div class="col-3">
-                <label>Workstreams</label>
-                <select class="form-select" id="workstreams"></select>
-            </div>
-            <div class="col-2">
-                <label>Actual Start Date</label>
-                <input type="date" class="form-control" id="actualStartDate" />
-            </div>
-
-        </div>
-        <div class="col-2">
-            <label>Prod Release Date</label>
-            <input type="date" class="form-control" id="productionReleaseDate" />
 
 
-        </div>
-</div>
-@*row-4*@
-<div class="row">
-    <div class="col-2">
-        <label>Due Date</label>
-        <input type="date" class="form-control" id="dueDate" />
-    </div>
-    <div class="col-3">
-        <label>Requestor Details</label>
-        <input type="text" id="requestor" class="form-control">
-    </div>
-    <div class="col-2">
-        <label>SD Ticket Number</label>
-        <input class="form-control" type="text" id="sdTicketNumber" />
-    </div>
-    <div class="col-3">
-        <label>Status</label>
-        <select class="form-select" id="status"></select>
-    </div>
-    <div class="col-2">
-        <label>Sub Status</label>
-        <select class="form-select" id="subStatus"></select>
-    </div>
-</div>
-@*row-5*@
-<div class="row">
-    <div class="col-2">
-        <label>Priority</label>
-        <select class="form-select" id="priority"></select>
-    </div>
-    <div class="col-3">
-        <label>Originating Country / Group</label>
-        <select class="form-select" id="originatingCountryGroup"></select>
-    </div>
-</div>
-<div class="col-12">
-    <div style="text-align:right;">
-        <input type="submit" class="btn btn-primary" name="Submit" value="Submit" />
-        <input type="reset" class="btn btn-primary" name="Reset" value="Reset" />
-    </div>
-</div>
-    </form>
-</div>
-
-
+function getInitiatives() {
+    $.ajax({
+        url: 'Ticket/GetInitiatives',
+        type: 'GET',
+        async: true,
+        dataType: 'json',
+        success: function (result) {
+            var appenddata = "<option value=''>" + '--Select--' + " </option>";
+            for (var i = 0; i < result.length; i++) {
+                appenddata += "<option value='" + result[i].id + "'>" + result[i].name + " </option>";
+            }
+            $("#initiatives").append(appenddata);
+        },
+        error: function (err) {
+            console.log("error: " + err);
+        }
+    });
+}
