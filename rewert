@@ -1,19 +1,466 @@
-<Project Sdk="Microsoft.NET.Sdk">
+$(document).ready(function () {
+    //Calling functions on page load
+    getInitiiatives(); 
+    getBackLog();
+    getRagStatus();
+    getBillingEffort();
+    getPriority();
+    getCountry();
+    getStatus();
+    getAssignee();
+    getWorkStreams();
+    
+    // For search and seleect dropdown
 
-  <PropertyGroup>
-    <TargetFrameworks>net6.0;netcoreapp3.1</TargetFrameworks>
-  </PropertyGroup>
+    $('select').select2();
 
-  <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.TestHost" Version="6.0.13 " Condition="'$(TargetFramework)' == 'net6.0'" />
-    <PackageReference Include="Microsoft.AspNetCore.TestHost" Version="3.1.32" Condition="'$(TargetFramework)' == 'netcoreapp3.1'" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="6.0.0" />
-    <PackageReference Include="System.Text.Json" Version="6.0.7" />
-  </ItemGroup>
+    //Initiatives on change event handling
+    $("#initiatives").change(function () {
+        var projectDescription = $("#initiatives").val();
+        getProjects(projectDescription);
+    });
+    //ProjectList on change event handling
+    $("#projectList").change(function () {
+        var projectDescription = $("#initiatives").val();
+        var projectName = $("#projectList").val();
+        getEpics(projectDescription, projectName);
+    });
+    //epicList on change event handling
+    $("#epicList").change(function () {
+        var projectDescription = $("#epicList").val();
+        var projectName = $("#projectList").val();
+        getTasks(projectDescription, projectName);
+        getStory(projectDescription, projectName);
+        if (projectDescription) {
+            $("#divIssueType").css("display", "block");
+        } else {
+            $("#divIssueType").css("display", "none");
+        }
+    });
+    //status on change event handling
+    $("#status").change(function () {
+        var status = $("#status").val();
+        getSubStatus(status);
+    });
+    //Click Event issueType
+    $("#issueTypeSubTask").click(function () {
+        $('#issueTypeModal').modal('show');
+        $("#dynamicText").text("SubTask");
+    });
+    $("#issueTypeBug").click(function () {
+        $('#issueTypeModal').modal('show');
+        $("#dynamicText").text("Bug");
+    });
+    $("#modalTask").click(function () {
+        $('#issueTypeModal').modal('hide');
+        $("#divTaskList").css("display", "block");
+        $("#divStoryList").css("display", "none");
+    });
+    $("#modalStory").click(function () {
+        $('#issueTypeModal').modal('hide');
+        $("#divTaskList").css("display", "none");
+        $("#divStoryList").css("display", "block");
+    });
+    //initiatives
+    // Initiatives
+    function getInitiatives() {
+        $.ajax({
+            url: 'Ticket/GetInitiatives',
+            type: 'GET',
+            async: true,
+            dataType: 'json',
+            success: function (result) {
+                var appenddata = "<option value=''>" + '--Select--' + " </option>";
+                for (var i = 0; i < result.length; i++) {
+                    appenddata += "<option value='" + result[i].id + "'>" + result[i].name + " </option>";
+                }
+                $("#initiatives").append(appenddata);
+            },
+            error: function (err) {
+                console.log("error: " + err);
+            }
+        });
+    }
 
-  <ItemGroup>
-    <ProjectReference Include="..\..\src\JWT.Extensions.AspNetCore\JWT.Extensions.AspNetCore.csproj" />
-    <ProjectReference Include="..\JWT.Tests.Common\JWT.Tests.Common.csproj" />
-  </ItemGroup>
+    //projects
+    // Projects
+    function getProjects(projectDescription) {
+        $.ajax({
+            url: 'Ticket/GetProjects?projectDescription=' + projectDescription,
+            type: 'GET',
+            async: true,
+            dataType: 'json',
+            success: function (result) {
+                $("#projectList").empty();
+                var appenddata = "<option value=''>" + '--Select--' + " </option>";
+                for (var i = 0; i < result.length; i++) {
+                    appenddata += "<option value='" + result[i].id + "'>" + result[i].name + " </option>";
+                }
+                $("#projectList").append(appenddata);
 
-</Project>
+                // Update Select2 after dynamically adding options
+                $("#projectList").select2();
+            },
+            error: function (err) {
+                console.log("error: " + err);
+
+            }
+        });
+    }
+    //epics
+    // Epics
+    function getEpics(projectDescription, projectName) {
+        $.ajax({
+            url: 'Ticket/GetEpics?projectDescription=' + projectDescription + '&projectName=' + projectName,
+            type: 'GET',
+            async: true,
+            dataType: 'json',
+            success: function (result) {
+                $("#epicList").empty();
+                var appenddata = "<option value=''>" + '--Select--' + " </option>";
+                for (var i = 0; i < result.length; i++) {
+                    appenddata += "<option value='" + result[i].id + "'>" + result[i].name + " </option>";
+                }
+                $("#epicList").append(appenddata);
+
+                // Update Select2 after dynamically adding options
+                $("#epicList").select2();
+            },
+            error: function (err) {
+                console.log("error: " + err);
+            }
+        });
+    }
+    //isBackLog
+    function getBackLog() {
+        $.ajax({
+            url: 'Ticket/GetBackLog',
+            type: 'GET',
+            async: true,
+            dataType: 'json',
+            success: function (result) {
+                var appenddata = "<option value = ''>" + '--Select--' + " </option>";
+                for (var i = 0; i < result.length; i++) {
+                    appenddata += "<option value='" + result[i].id + "'>" + result[i].name + " </option>";
+                }
+                $("#isBackLog").append(appenddata);
+            },
+            error: function (err) {
+                console.log("error: " + err);
+
+            }
+        });
+    }
+    //RagStatus
+    function getRagStatus() {
+        $.ajax({
+            url: 'Ticket/GetRagStatus',
+            type: 'GET',
+            async: true,
+            dataType: 'json',
+            success: function (result) {
+                var appenddata = "<option value = ''>" + '--Select--' + " </option>";
+                for (var i = 0; i < result.length; i++) {
+                    appenddata += "<option value='" + result[i].id + "'>" + result[i].name + " </option>";
+                }
+                $("#ragStatus").append(appenddata);
+            },
+            error: function (err) {
+                console.log("error: " + err);
+
+            }
+        });
+    }
+    //BillingEffort
+    function getBillingEffort() {
+        $.ajax({
+            url: 'Ticket/GetBillingEffort',
+            type: 'GET',
+            async: true,
+            dataType: 'json',
+            success: function (result) {
+                var appenddata = "<option value = ''>" + '--Select--' + " </option>";
+                for (var i = 0; i < result.length; i++) {
+                    appenddata += "<option value='" + result[i].id + "'>" + result[i].name + " </option>";
+                }
+                $("#billingEffort").append(appenddata);
+            },
+            error: function (err) {
+                console.log("error: " + err);
+
+            }
+        });
+    }
+    //Priority
+    function getPriority() {
+        $.ajax({
+            url: 'Ticket/GetPriority',
+            type: 'GET',
+            async: true,
+            dataType: 'json',
+            success: function (result) {
+                var appenddata = "<option value = ''>" + '--Select--' + " </option>";
+                for (var i = 0; i < result.length; i++) {
+                    appenddata += "<option value='" + result[i].id + "'>" + result[i].name + " </option>";
+                }
+                $("#priority").append(appenddata);
+            },
+            error: function (err) {
+                console.log("error: " + err);
+
+            }
+        });
+    }
+    //Country
+    function getCountry() {
+        $.ajax({
+            url: 'Ticket/GetCountry',
+            type: 'GET',
+            async: true,
+            dataType: 'json',
+            success: function (result) {
+                var $originatingCountryGroup = $("#originatingCountryGroup");
+                $originatingCountryGroup.empty();
+                var appenddata = "<option value=''></option>"; // Removed '--Select--' as Select2 will handle it
+                for (var i = 0; i < result.length; i++) {
+                    appenddata += "<option value='" + result[i].id + "'>" + result[i].name + " </option>";
+                }
+                $originatingCountryGroup.append(appenddata);
+
+                // Initialize Select2 plugin
+                $originatingCountryGroup.select2();
+            },
+            error: function (err) {
+                console.log("error: " + err);
+            }
+        });
+    }
+
+    //Status
+    function getStatus() {
+        $.ajax({
+            url: 'Ticket/GetStatus',
+            type: 'GET',
+            async: true,
+            dataType: 'json',
+            success: function (result) {
+                var appenddata = "<option value = ''>" + '--Select--' + " </option>";
+                for (var i = 0; i < result.length; i++) {
+                    appenddata += "<option value='" + result[i].id + "'>" + result[i].name + " </option>";
+                }
+                $("#status").append(appenddata);
+            },
+            error: function (err) {
+                console.log("error: " + err);
+
+            }
+        });
+    }
+    //substatus
+    function getSubStatus(status) {
+        $.ajax({
+            url: 'Ticket/GetSubStatus?status=' + status,
+            type: 'GET',
+            async: true,
+            dataType: 'json',
+            success: function (result) {
+                $("#subStatus").empty();
+                var appenddata = "<option value = ''>" + '--Select--' + " </option>";
+                for (var i = 0; i < result.length; i++) {
+                    appenddata += "<option value='" + result[i].id + "'>" + result[i].name + " </option>";
+                }
+                $("#subStatus").append(appenddata);
+            },
+            error: function (err) {
+                console.log("error: " + err);
+
+            }
+        });
+    }
+    function getAssignee() {
+        $.ajax({
+            url: 'Ticket/GetAssignee',
+            type: 'GET',
+            async: true,
+            dataType: 'json',
+            success: function (result) {
+                var $assignee = $("#assignee");
+                $assignee.empty();
+                var appenddata = "<option value=''></option>"; // Removed '--Select--' as Select2 will handle it
+                for (var i = 0; i < result.length; i++) {
+                    appenddata += "<option value='" + result[i].id + "'>" + result[i].name + " </option>";
+                }
+                $assignee.append(appenddata);
+
+                // Initialize Select2 plugin
+                $assignee.select2();
+            },
+            error: function (err) {
+                console.log("error: " + err);
+            }
+        });
+    }
+
+    //Workstreams
+    function getWorkStreams() {
+        $.ajax({
+            url: 'Ticket/GetWorkStreams',
+            type: 'GET',
+            async: true,
+            dataType: 'json',
+            success: function (result) {
+                var appenddata = "<option value = ''>" + '--Select--' + " </option>";
+                for (var i = 0; i < result.length; i++) {
+                    appenddata += "<option value='" + result[i].id + "'>" + result[i].name + " </option>";
+                }
+                $("#workstreams").append(appenddata);
+            },
+            error: function (err) {
+                console.log("error: " + err);
+
+            }
+        });
+    }   
+    //tasks
+    function getTasks(projectDescription, projectName) {
+        $.ajax({
+            url: 'Ticket/GetTasks?projectDescription=' + projectDescription + '&projectName=' + projectName,
+            type: 'GET',
+            async: true,
+            dataType: 'json',
+            success: function (result) {
+                var $taskList = $("#taskList");
+                $taskList.empty();
+                var appenddata = "<option value=''></option>"; // Removed '--Select--' as Select2 will handle it
+                for (var i = 0; i < result.length; i++) {
+                    appenddata += "<option value='" + result[i].id + "'>" + result[i].name + " </option>";
+                }
+                $taskList.append(appenddata);
+
+                // Initialize Select2 plugin
+                $taskList.select2();
+            },
+            error: function (err) {
+                console.log("error: " + err);
+            }
+        });
+    }
+
+    //story
+    function getStory(projectDescription, projectName) {
+        $.ajax({
+            url: 'Ticket/GetStory?projectDescription=' + projectDescription + '&projectName=' + projectName,
+            type: 'GET',
+            async: true,
+            dataType: 'json',
+            success: function (result) {
+                var $storyList = $("#storyList");
+                $storyList.empty();
+                var appenddata = "<option value=''></option>"; // Removed '--Select--' as Select2 will handle it
+                for (var i = 0; i < result.length; i++) {
+                    appenddata += "<option value='" + result[i].id + "'>" + result[i].name + " </option>";
+                }
+                $storyList.append(appenddata);
+
+                // Initialize Select2 plugin
+                $storyList.select2();
+            },
+            error: function (err) {
+                console.log("error: " + err);
+            }
+        });
+    }
+
+    $("#jiraForm").submit(function () {
+        event.preventDefault();
+
+        var initiatives = $("#initiatives").val();
+        var projectList = $("#projectList").val();
+        var epicList = $("#epicList").val();
+        var issueType = $("#issueType").val();
+        var issueLevel = $("#issueLevel").val();
+        var summary = $("#summary").val();
+        var billingEffort = $("#billingEffort").val();
+        var assignee = $("#assignee").val();
+        var description = $("#description").val();
+        var isBackLog = $("#isBackLog").val();
+        var ragStatus = $("#ragStatus").val();
+        var workstreams = $("#workstreams").val();
+        var actualStartDate = $("#actualStartDate").val();
+        var actualEndDate = $("#actualEndDate").val();
+        var productionReleaseDate = $("#productionReleaseDate").val();
+        var dueDate = $("#dueDate").val();
+        var requestor = $("#requestor").val();
+        var sdTicketNumber = $("#sdTicketNumber").val();
+        var status = $("#status").val();
+        var subStatus = $("#subStatus").val();
+        var priority = $("#priority").val();
+        var originatingCountryGroup = $("#originatingCountryGroup").val();
+        
+        var taskList = $("#taskList").val();
+        var storyList = $("#storyList").val();
+
+        var modalIssueType = $('input[name="modalIssueType"]:checked').val();
+        var radioIssueType = $('input[name="issueType"]:checked').val();
+
+
+
+        //console.log(initiatives);
+        //console.log(projectList);
+        //console.log(epicList);
+        //console.log(issueType);
+        //console.log(issueLevel);
+        //console.log(summary);
+        //console.log(billingEffort);
+        //console.log(assignee);
+        //console.log(description);
+        //console.log(isBackLog);
+        //console.log(ragStatus);
+        //console.log(workstreams);
+        //console.log(actualStartDate);
+        //console.log(actualEndDate);
+        //console.log(productionReleaseDate);
+        //console.log(dueDate);
+        //console.log(requestor);
+        //console.log(sdTicketNumber);
+        //console.log(status);
+        //console.log(subStatus);
+        //console.log(priority);
+        //console.log(originatingCountryGroup);
+        //console.log(taskList);
+        //console.log(storyList);
+        //console.log(modalIssueType);
+        //console.log(radioIssueType);
+
+        var formData = new FormData();
+        formData.append("initiatives", initiatives);
+        formData.append("projectList", projectList);
+        formData.append("epicList", epicList);
+        formData.append("issueType", issueType);
+        formData.append("issueLevel", issueLevel);
+        formData.append("summary", summary);
+        formData.append("billingEffort", billingEffort);
+        formData.append("assignee", assignee);
+        formData.append("description", description);
+        formData.append("isBackLog", isBackLog);
+        formData.append("ragStatus", ragStatus);
+        formData.append("workstreams", workstreams);
+        formData.append("actualStartDate", actualStartDate);
+        formData.append("actualEndDate", actualEndDate);
+        formData.append("productionReleaseDate", productionReleaseDate);
+        formData.append("dueDate", dueDate);
+        formData.append("requestor", requestor);
+        formData.append("sdTicketNumber", sdTicketNumber);
+        formData.append("status", status);
+        formData.append("subStatus", subStatus);
+        formData.append("priority", priority);
+        formData.append("originatingCountryGroup", originatingCountryGroup);
+        formData.append("taskList", taskList);
+        formData.append("storyList", storyList);
+        formData.append("modalIssueType", modalIssueType);
+        formData.append("radioIssueType", radioIssueType);
+        console.log(formData);
+
+
+    });
+});
