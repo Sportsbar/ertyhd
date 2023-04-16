@@ -1,3 +1,37 @@
+// Initiatives
+function getInitiatives() {
+    $.ajax({
+        url: 'Ticket/GetInitiatives',
+        type: 'GET',
+        async: true,
+        dataType: 'json',
+        success: function (result) {
+            var appenddata = "<option value=''>" + '--Select--' + " </option>";
+            for (var i = 0; i < result.length; i++) {
+                appenddata += "<option value='" + result[i].id + "'>" + result[i].name + " </option>";
+            }
+            $("#initiatives").append(appenddata);
+            $("#initiatives").select2();
+        },
+        error: function (err) {
+            console.log("error: " + err);
+        }
+    });
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 <link href="~/lib/bootstrap/css/bootstrap.min.css" rel="stylesheet" />
 <link rel="stylesheet" href="~/css/ticket.css" rel="stylesheet" />
 
